@@ -15,7 +15,8 @@
 The object of this project is to Python code implementations of transportation
 applications, e.g., North-West Corner Method, transportation plan optimization
 with non-basic variables, travel distribution between zones.
-The code is going to be part of a transportation apps book.
+The code is going to be part of a transportation apps book writen by a group of
+authors.
 
 ## Screenshots
 ![Example screenshot](transportation_demand.png)
@@ -25,6 +26,8 @@ The code is going to be part of a transportation apps book.
 * Numpy
 * Pandas
 * Matplotlib
+* Seaborn
+* scipy
 * Jupyter Notebook, etc.
 
 ## Setup
@@ -56,4 +59,4 @@ Project is: _in progress_
 Project based on many and various sources.
 
 ## Contact
-rdt333@gmail.com - feel free to contact me!
+rdt333@gmail.com - feel free to contact us!
