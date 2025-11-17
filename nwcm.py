@@ -44,4 +44,14 @@ for row in zrs:
 
 print("Sum of decision variables checks the sum of supply & demand, ", sumz == sum_s,",", sumz == sum_d)
 
+fn_cost = 0
+dec_variables = 0
+for r_inx in range(len(zrs)):
+    for c_inx in range(len(zrs[r_inx])):
+        if zrs[r_inx][c_inx] != 0:
+            fn_cost = fn_cost + zrs[r_inx][c_inx] * c[r_inx][c_inx]
+            dec_variables += 1
 
+print("Basic solution is feasible, ", dec_variables == len(s) + len(d) - 1)
+
+print("NW Corner Method total allocation cost, ", fn_cost)
