@@ -25,7 +25,7 @@ assert sum(s) == sum(d)    #sum of supply must be = to sum of demand
 
 # create a matrix of zeros for decision variables
 zrs = [ [0] * len(c[0]) for _ in range(len(c))]
-print("Zeroed 2D list, ",zrs)
+# print("Zeroed 2D list, ",zrs)
 
 # the core code of the script
 for ss in range(len(s)):
