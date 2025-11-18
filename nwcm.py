@@ -34,14 +34,27 @@ sum_s2 = sum(s2)
 sum_d2 = sum(d2)
 
 #+++++ CASE 3 +++++
-c3 = [[2, 5, 1],
-     [7, 3, 2],
-     [1, 5, 3]]
+c3 = [[2, 5, 1, 7, 3, 2]]
 
-s3 = [25, 23, 26]
-d3 = [31, 22, 21]
+s3 =  [148]
+d3 = [25, 23, 26, 31, 22, 21]
+
 sum_s3 = sum(s3)
 sum_d3 = sum(d3)
+
+#+++++ CASE 4 +++++
+c4 = [[2],
+      [5],
+      [1],
+      [7],
+      [3],
+      [2]]
+
+s4 = [25, 23, 26, 31, 22, 21]
+d4 = [148]
+sum_s4 = sum(s4)
+sum_d4 = sum(d4)
+
 #+++++ END DATA SECTION +++++
 
 def assertions(c, s, d):
@@ -55,15 +68,32 @@ def assertions(c, s, d):
     assert len(c[0]) == len(d)    #cols must be = to number of demands
     assert sum(s) == sum(d)    #sum of supply must be = to sum of demand
 
-# create a matrix of zeros for decision variables
-zrs = [ [0] * len(c[0]) for _ in range(len(c))]
-# print("Zeroed 2D list, ",zrs)
+# create matrices of zeros for decision variables
+zrs1 = [ [0] * len(c1[0]) for _ in range(len(c1))]
+zrs2 = [ [0] * len(c2[0]) for _ in range(len(c2))]
+zrs3 = [ [0] * len(c3[0]) for _ in range(len(c3))]
+zrs4 = [ [0] * len(c4[0]) for _ in range(len(c4))]
 
-# numpy list conversions to arrays
-c_array = np.array(c)
-s_array = np.array(s)
-d_array = np.array(d)
-zrs_array = np.array(zrs)
+# numpy lists conversions to arrays
+c1_array = np.array(c1)
+s1_array = np.array(s1)
+d1_array = np.array(d1)
+zrs1_array = np.array(zrs1)
+
+c2_array = np.array(c2)
+s2_array = np.array(s2)
+d2_array = np.array(d2)
+zrs2_array = np.array(zrs2)
+
+c3_array = np.array(c3)
+s3_array = np.array(s3)
+d3_array = np.array(d3)
+zrs3_array = np.array(zrs3)
+
+c4_array = np.array(c4)
+s4_array = np.array(s4)
+d4_array = np.array(d4)
+zrs4_array = np.array(zrs4)
 
 # the core code of the script
 def allocNW(s_array, d_array, zrs_array):
@@ -83,10 +113,22 @@ def allocNW(s_array, d_array, zrs_array):
                     d_array[d] = d_array[d] - zrs_array[s, d]    #update demand after alloc
     return zrs_array
 
-zrs_array = allocNW(s_array, d_array, zrs_array)
+zrs1_alloc_array = allocNW(s1_array, d1_array, zrs1_array)
+zrs2_alloc_array = allocNW(s2_array, d2_array, zrs2_array)
+zrs3_alloc_array = allocNW(s3_array, d3_array, zrs3_array)
+zrs4_alloc_array = allocNW(s4_array, d4_array, zrs4_array)
 
-print("Alloc matrix with NWCM, ") 
-print(zrs_array)
+print("Alloc matrix one with NWCM, ") 
+print(zrs1_alloc_array)
+
+print("Alloc matrix two with NWCM, ") 
+print(zrs2_alloc_array)
+
+print("Alloc matrix three with NWCM, ") 
+print(zrs3_alloc_array)
+
+print("Alloc matrix four with NWCM, ") 
+print(zrs4_alloc_array)
 
 # check the allocated quantities to match total
 def sum_check(zrs_array):
@@ -100,9 +142,19 @@ def sum_check(zrs_array):
         sumz = sumz + sum(zrs_array[indx])
     return sumz
 
-sum_z = sum_check(zrs_array)
+sum_z1 = sum_check(zrs1_alloc_array)
+sum_z2 = sum_check(zrs2_alloc_array)
+sum_z3 = sum_check(zrs3_alloc_array)
+sum_z4 = sum_check(zrs4_alloc_array)
 
-print("Sum of decision variables checks the sum of supply & demand, ", sum_z == sum_s)
+print("Sum of decision variables checks the sum of supply & demand matrix one, ", sum_z1
+      == sum_s1)
+print("Sum of decision variables checks the sum of supply & demand matrix two, ", sum_z2
+      == sum_s2)
+print("Sum of decision variables checks the sum of supply & demand matrix three, ", sum_z3
+      == sum_s3)
+print("Sum of decision variables checks the sum of supply & demand matrix four, ", sum_z4
+      == sum_s4)
 
 # check feasibility and compute cost
 def feasibility_cost(zrs_array, c_array, s_array, d_array):
@@ -119,7 +171,7 @@ def feasibility_cost(zrs_array, c_array, s_array, d_array):
     for r_inx in range(len(zrs_array)):
         for c_inx in range(len(zrs_array[r_inx])):
             if zrs_array[r_inx, c_inx] != 0:
-                fn_cost = fn_cost + zrs_array[r_inx, c_inx] * c[r_inx][c_inx]
+                fn_cost = fn_cost + zrs_array[r_inx, c_inx] * c_array[r_inx, c_inx]
                 dec_variables += 1
 
     fbool = dec_variables == len(s_array) + len(d_array) - 1 
@@ -129,8 +181,22 @@ def feasibility_cost(zrs_array, c_array, s_array, d_array):
         print("The basic solution is degenerate. Exiting function!")
         exit()
 
-print("Basic solution is feasible, ", feasibility_cost(zrs_array, c_array,
-                                                       s_array, d_array)[0])
+print("Basic solution is feasible (one), ",
+      feasibility_cost(zrs1_alloc_array, c1_array, s1_array, d1_array)[0])
+print("NW Corner Method total allocation cost (one), ",
+      feasibility_cost(zrs1_alloc_array, c1_array, s1_array, d1_array)[1])
 
-print("NW Corner Method total allocation cost, ", feasibility_cost(zrs_array, c_array,
-                                                       s_array, d_array)[1])
+print("Basic solution is feasible (two), ",
+      feasibility_cost(zrs2_alloc_array, c2_array, s2_array, d2_array)[0])
+print("NW Corner Method total allocation cost (two), ",
+      feasibility_cost(zrs2_alloc_array, c2_array, s2_array, d2_array)[1])
+
+print("Basic solution is feasible (three), ",
+      feasibility_cost(zrs3_alloc_array, c3_array, s3_array, d3_array)[0])
+print("NW Corner Method total allocation cost (three), ",
+      feasibility_cost(zrs3_alloc_array, c3_array, s3_array, d3_array)[1])
+
+print("Basic solution is feasible (four), ",
+      feasibility_cost(zrs4_alloc_array, c4_array, s4_array, d4_array)[0])
+print("NW Corner Method total allocation cost (four), ",
+      feasibility_cost(zrs4_alloc_array, c4_array, s4_array, d4_array)[1])
