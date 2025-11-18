@@ -67,6 +67,11 @@ print(zrs_array)
 
 # check the allocated quantities to match total
 def sum_check(zrs_array):
+    """
+    Function to check whether the sum of allocated quantities match the total.
+    Takes as input the allocation matrix.
+    Returns the sum derived from the allocation matrix.
+    """
     sumz = 0
     for indx in range(len(zrs_array)):
         sumz = sumz + sum(zrs_array[indx])
@@ -78,6 +83,14 @@ print("Sum of decision variables checks the sum of supply & demand, ", sum_z == 
 
 # check feasibility and compute cost
 def feasibility_cost(zrs_array, c_array, s_array, d_array):
+    """
+    Function to check feasibility and total cost if the basic solution is not a
+    degenerate one.
+    Takes as inputs the allocation and cost matrices, and supply and demand
+    arrays.
+    Returns a tuple with a bool if feasibility is checked and the total cost.
+    If feasibility is not checked prints a warning and ends execution.
+    """
     fn_cost = 0
     dec_variables = 0
     for r_inx in range(len(zrs_array)):
