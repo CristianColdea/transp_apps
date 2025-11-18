@@ -12,14 +12,37 @@ import numpy as np
 
 # Enter here the cost matrix
 # and supply and demand quantities
-c = [[2, 5, 1],
+
+#+++++ START DATA SECTION +++++
+#+++++ CASE 1 +++++
+c1 = [[2, 5, 1],
      [7, 3, 2],
      [1, 5, 3]]
 
-s = [25, 23, 26]
-d = [31, 22, 21]
-sum_s = sum(s)
-sum_d = sum(d)
+s1 = [25, 23, 26]
+d1 = [31, 22, 21]
+sum_s1 = sum(s1)
+sum_d1 = sum(d1)
+
+#+++++ CASE 2 +++++
+c2 = [[2, 5, 1],
+      [7, 3, 2]]
+
+s2 = [25, 23]
+d2 = [11, 22, 15]
+sum_s2 = sum(s2)
+sum_d2 = sum(d2)
+
+#+++++ CASE 3 +++++
+c3 = [[2, 5, 1],
+     [7, 3, 2],
+     [1, 5, 3]]
+
+s3 = [25, 23, 26]
+d3 = [31, 22, 21]
+sum_s3 = sum(s3)
+sum_d3 = sum(d3)
+#+++++ END DATA SECTION +++++
 
 def assertions(c, s, d):
     """
