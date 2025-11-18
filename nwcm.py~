@@ -203,4 +203,4 @@ print("NW Corner Method total allocation cost (three), ",
 print("Basic solution is feasible (four), ",
       feasibility_cost(zrs4_alloc_array, c4_array, s4_array, d4_array)[0])
 print("NW Corner Method total allocation cost (four), ",
-      feasibility_cost(zrs5_alloc_array, c4_array, s4_array, d4_array)[1])
+      feasibility_cost(zrs4_alloc_array, c4_array, s4_array, d4_array)[1])
