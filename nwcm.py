@@ -37,13 +37,13 @@ zrs = [ [0] * len(c[0]) for _ in range(len(c))]
 # print("Zeroed 2D list, ",zrs)
 
 # numpy list conversions to arrays
-def arrays_conv(c, s, d):
-    c_array = np.array(c)
-    s_array = np.array(s)
-    d_array = np.arrayd)
+c_array = np.array(c)
+s_array = np.array(s)
+d_array = np.array(d)
+zrs_array = np.array(zrs)
 
 # the core code of the script
-def allocNW(s, d, zrs):
+def allocNW(s_array, d_array, zrs_array):
     """
     Function to determine a BFS with NW Corner Method.
     Takes as inputs the supply and demand arrays and the matrix of zeros with
@@ -51,30 +51,50 @@ def allocNW(s, d, zrs):
     Returns the modified matrix of zeros with certain zeros replaced by the
     decision variables (positive integers) in proper positions.
     """
-    for ss in range(len(s)):
-        if s[ss] != 0:
-            for ds in range(len(d)):
-                if d[ds] != 0:
-                    zrs[ss][ds] = min(s[ss], d[ds])
-                    s[ss] = s[ss] - zrs[ss][ds]    #update supply after alloc
-                    d[ds] = d[ds] - zrs[ss][ds]    #update demand after alloc
-    return zrs
-print("Alloc matrix with NWCM, ", zrs)
+    for s in range(len(s_array)):
+        if s_array[s] != 0:
+            for d in range(len(d_array)):
+                if d_array[d] != 0:
+                    zrs_array[s, d] = min(s_array[s], d_array[d])
+                    s_array[s] = s_array[s] - zrs_array[s, d]    #update supply after alloc
+                    d_array[d] = d_array[d] - zrs_array[s, d]    #update demand after alloc
+    return zrs_array
 
-sumz = 0
-for row in zrs:
-    sumz = sumz + sum(row)
+zrs_array = allocNW(s_array, d_array, zrs_array)
 
-print("Sum of decision variables checks the sum of supply & demand, ", sumz == sum_s,",", sumz == sum_d)
+print("Alloc matrix with NWCM, ") 
+print(zrs_array)
 
-fn_cost = 0
-dec_variables = 0
-for r_inx in range(len(zrs)):
-    for c_inx in range(len(zrs[r_inx])):
-        if zrs[r_inx][c_inx] != 0:
-            fn_cost = fn_cost + zrs[r_inx][c_inx] * c[r_inx][c_inx]
-            dec_variables += 1
+# check the allocated quantities to match total
+def sum_check(zrs_array):
+    sumz = 0
+    for indx in range(len(zrs_array)):
+        sumz = sumz + sum(zrs_array[indx])
+    return sumz
 
-print("Basic solution is feasible, ", dec_variables == len(s) + len(d) - 1)
+sum_z = sum_check(zrs_array)
 
-print("NW Corner Method total allocation cost, ", fn_cost)
+print("Sum of decision variables checks the sum of supply & demand, ", sum_z == sum_s)
+
+# check feasibility and compute cost
+def feasibility_cost(zrs_array, c_array, s_array, d_array):
+    fn_cost = 0
+    dec_variables = 0
+    for r_inx in range(len(zrs_array)):
+        for c_inx in range(len(zrs_array[r_inx])):
+            if zrs_array[r_inx, c_inx] != 0:
+                fn_cost = fn_cost + zrs_array[r_inx, c_inx] * c[r_inx][c_inx]
+                dec_variables += 1
+
+    fbool = dec_variables == len(s_array) + len(d_array) - 1 
+    if fbool:
+        return (fbool, fn_cost)
+    else:
+        print("The basic solution is degenerate. Exiting function!")
+        exit()
+
+print("Basic solution is feasible, ", feasibility_cost(zrs_array, c_array,
+                                                       s_array, d_array)[0])
+
+print("NW Corner Method total allocation cost, ", feasibility_cost(zrs_array, c_array,
+                                                       s_array, d_array)[1])
