@@ -1,5 +1,5 @@
 """
-Script to determine a basic feasible solution (BFS) with North_West Corner
+Script to determine a Basic Feasible Solution (BFS) with North_West Corner
 allocation method.
 It takes as inputs the cost matrix, the supply and demand lists. The length of
 supply must match the number of cost matrix rows and that of demand the
@@ -7,6 +7,8 @@ columns, respectively.
 Returns the allocation table, whether the feasible solution is possible, i.e.,
 bool, and the allocation total cost.
 """
+
+import numpy as np
 
 # Enter here the cost matrix
 # and supply and demand quantities
@@ -19,23 +21,44 @@ d = [31, 22, 21]
 sum_s = sum(s)
 sum_d = sum(d)
 
-assert len(c) == len(s)   #rows must be = to number of supply sources
-assert len(c[0]) == len(d)    #cols must be = to number of demands
-assert sum(s) == sum(d)    #sum of supply must be = to sum of demand
+def assertions(c, s, d):
+    """
+    Function to check the dimensional 'sanity', i.e., compatibility,
+    of the cost matrix with supply and demand lists/arrays.
+    Takes as input the cost matrix, supply and demand arrays.
+    Signals problems and aborts execution.
+    """
+    assert len(c) == len(s)   #rows must be = to number of supply sources
+    assert len(c[0]) == len(d)    #cols must be = to number of demands
+    assert sum(s) == sum(d)    #sum of supply must be = to sum of demand
 
 # create a matrix of zeros for decision variables
 zrs = [ [0] * len(c[0]) for _ in range(len(c))]
 # print("Zeroed 2D list, ",zrs)
 
-# the core code of the script
-for ss in range(len(s)):
-    if s[ss] != 0:
-        for ds in range(len(d)):
-            if d[ds] != 0:
-                zrs[ss][ds] = min(s[ss], d[ds])
-                s[ss] = s[ss] - zrs[ss][ds]    #update supply after alloc
-                d[ds] = d[ds] - zrs[ss][ds]    #update demand after alloc
+# numpy list conversions to arrays
+def arrays_conv(c, s, d):
+    c_array = np.array(c)
+    s_array = np.array(s)
+    d_array = np.arrayd)
 
+# the core code of the script
+def allocNW(s, d, zrs):
+    """
+    Function to determine a BFS with NW Corner Method.
+    Takes as inputs the supply and demand arrays and the matrix of zeros with
+    the same shape as the cost matrix.
+    Returns the modified matrix of zeros with certain zeros replaced by the
+    decision variables (positive integers) in proper positions.
+    """
+    for ss in range(len(s)):
+        if s[ss] != 0:
+            for ds in range(len(d)):
+                if d[ds] != 0:
+                    zrs[ss][ds] = min(s[ss], d[ds])
+                    s[ss] = s[ss] - zrs[ss][ds]    #update supply after alloc
+                    d[ds] = d[ds] - zrs[ss][ds]    #update demand after alloc
+    return zrs
 print("Alloc matrix with NWCM, ", zrs)
 
 sumz = 0
