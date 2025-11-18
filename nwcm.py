@@ -130,6 +130,8 @@ print(zrs3_alloc_array)
 print("Alloc matrix four with NWCM, ") 
 print(zrs4_alloc_array)
 
+print("++++++++++"'\n')
+
 # check the allocated quantities to match total
 def sum_check(zrs_array):
     """
@@ -155,6 +157,8 @@ print("Sum of decision variables checks the sum of supply & demand matrix three,
       == sum_s3)
 print("Sum of decision variables checks the sum of supply & demand matrix four, ", sum_z4
       == sum_s4)
+
+print("++++++++++"'\n')
 
 # check feasibility and compute cost
 def feasibility_cost(zrs_array, c_array, s_array, d_array):
