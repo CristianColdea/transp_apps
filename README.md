@@ -29,6 +29,7 @@ authors.
 * Seaborn
 * scipy
 * Jupyter Notebook, etc.
+* Code static typed
 
 ## Setup
 Just read the docstrings and comments. Also pay attention to matrices
