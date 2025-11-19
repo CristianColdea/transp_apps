@@ -54,7 +54,6 @@ s4 = [25, 23, 26, 31, 22, 21]
 d4 = [148]
 sum_s4 = sum(s4)
 sum_d4 = sum(d4)
-
 #+++++ END DATA SECTION +++++
 
 def assertions(c, s, d):
@@ -94,6 +93,32 @@ c4_array = np.array(c4)
 s4_array = np.array(s4)
 d4_array = np.array(d4)
 zrs4_array = np.array(zrs4)
+
+print("Entry dataset, CASE 1 (costs, supply, demand):")
+print(c1_array)
+print(s1_array)
+print(d1_array)
+print()
+
+print("Entry dataset, CASE 2 (costs, supply, demand):")
+print(c2_array)
+print(s2_array)
+print(d2_array)
+print()
+
+print("Entry dataset, CASE 3 (costs, supply, demand):")
+print(c3_array)
+print(s3_array)
+print(d3_array)
+print()
+
+print("Entry dataset, CASE 4 (costs, supply, demand):")
+print(c4_array)
+print(s4_array)
+print(d4_array)
+
+print("++++++++++"'\n')
+
 
 # the core code of the script
 def allocNW(s_array, d_array, zrs_array):
@@ -203,4 +228,4 @@ print("NW Corner Method total allocation cost (three), ",
 print("Basic solution is feasible (four), ",
       feasibility_cost(zrs4_alloc_array, c4_array, s4_array, d4_array)[0])
 print("NW Corner Method total allocation cost (four), ",
-      feasibility_cost(zrs5_alloc_array, c4_array, s4_array, d4_array)[1])
+      feasibility_cost(zrs4_alloc_array, c4_array, s4_array, d4_array)[1])
