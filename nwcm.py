@@ -9,6 +9,7 @@ bool, and the allocation total cost.
 """
 
 import numpy as np
+from typing import Any
 
 # Enter here the cost matrix
 # and supply and demand quantities
@@ -56,7 +57,7 @@ sum_s4 = sum(s4)
 sum_d4 = sum(d4)
 #+++++ END DATA SECTION +++++
 
-def assertions(c, s, d):
+def assertions(c: list, s: list[int], d: list[int]) -> None:
     """
     Function to check the dimensional 'sanity', i.e., compatibility,
     of the cost matrix with supply and demand lists/arrays.
@@ -119,9 +120,9 @@ print(d4_array)
 
 print("++++++++++"'\n')
 
-
 # the core code of the script
-def allocNW(s_array, d_array, zrs_array):
+def allocNW(s_array: np.ndarray, d_array: np.ndarray,
+            zrs_array: np.ndarray) -> np.ndarray:
     """
     Function to determine a BFS with NW Corner Method.
     Takes as inputs the supply and demand arrays and the matrix of zeros with
@@ -158,7 +159,7 @@ print(zrs4_alloc_array)
 print("++++++++++"'\n')
 
 # check the allocated quantities to match total
-def sum_check(zrs_array):
+def sum_check(zrs_array: np.ndarray) -> int:
     """
     Function to check whether the sum of allocated quantities match the total.
     Takes as input the allocation matrix.
@@ -186,7 +187,9 @@ print("Sum of decision variables checks the sum of supply & demand matrix four, 
 print("++++++++++"'\n')
 
 # check feasibility and compute cost
-def feasibility_cost(zrs_array, c_array, s_array, d_array):
+def feasibility_cost(zrs_array: np.ndarray, c_array: np.ndarray,
+                     s_array: np.ndarray,
+                     d_array: np.ndarray) -> tuple[bool, int]|str:
     """
     Function to check feasibility and total cost if the basic solution is not a
     degenerate one.
