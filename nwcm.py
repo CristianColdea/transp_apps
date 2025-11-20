@@ -12,8 +12,8 @@ import numpy as np
 from typing import Any
 
 #+++++ USER INTERFACE SECTION +++++
-"""
-print(The following section provides the user with the mean of inputin data.
+
+print("""The following section provides the user with the mean of inputin data.
       The required data consists of cost matrix and the supply and demand
       lists. The matrix of cost is to be inputed by row in the form of (a1, ..., an),
       (b1, ..., bn), ..., (z1, ..., zn), and the supply list must match the
@@ -21,87 +21,43 @@ print(The following section provides the user with the mean of inputin data.
       must match the number of cost matrix columns in the form (d1, ..., dn).\n
       A complete example data of cost, supply and demand: cost (1, 2, 3),
       (4, 5, 6), supply (10, 15), demand (8, 8, 9). The transportation plan
-      must be balanced, i.e., sum of supplies = sum of demands.)
-"""
+      must be balanced, i.e., sum of supplies = sum of demands.""")
 
-#c = input("Enter here the matrix cost:\n> ")
-#s = input("Enter here the list of supply:\n> ")
-#d = input("Enter here the list of demand:\n> ")
+c = input("Enter here the matrix cost:\n> ")
+s = input("Enter here the list of supply:\n> ")
+d = input("Enter here the list of demand:\n> ")
 
-c = "(2, 5, 1), (7, 3, 2), (1, 5, 3)"
-s = "(25, 23, 26)"
-d = "(31, 22, 21)"
-print(c, s, d)
-
-cstock = []
-for r in c.strip(", "):
-    r = r.replace("(","").replace(")","")
-    for cost in r.strip(", "):
-        cstock.append(int(cost))
+#c = "(2, 5, 1), (7, 3, 2), (1, 5, 3)"
+#s = "(25, 23, 26)"
+#d = "(31, 22, 21)"
+#print(c, s, d)
 
 s_lst = []
-s = s.replace("(","").replace(")","")
-print("s, ", s)
-print("striped, ", s.strip(", "))
-#print("len(s), ", len(s))
-for supply in s.strip(","):
-    print("supply, ", supply)
-    #print(int(supply))
-    #s_lst.append(int(supply))
+for supply in s.replace("(","").replace(")","").split(","):
+    s_lst.append(int(supply))
 
-print("s_lst, ", s_lst)
+#print("s_lst, ", s_lst)
 
-c_lst = [cstock[i:i+3] for i in range(0, len(cstock), 3)]
-print("cstock, ", cstock)
-print("c_lst, ", c_lst)
+d_lst = []
+for supply in d.replace("(","").replace(")","").split(","):
+    d_lst.append(int(supply))
 
-"""
-# Enter here the cost matrix
-# and supply and demand quantities
+#print("d_lst, ", d_lst)
 
-#+++++ START DATA SECTION +++++
-#+++++ CASE 1 +++++
-c1 = [[2, 5, 1],
-     [7, 3, 2],
-     [1, 5, 3]]
+cstock = []
+for r in c.split(", "):
+    r = r.replace("(","").replace(")","")
+    for cost in r.split(", "):
+        cstock.append(int(cost))
 
-s1 = [25, 23, 26]
-d1 = [31, 22, 21]
-sum_s1 = sum(s1)
-sum_d1 = sum(d1)
 
-#+++++ CASE 2 +++++
-c2 = [[2, 5, 1],
-      [7, 3, 2]]
+c_lst = [cstock[i:i+len(d_lst)] for i in range(0, len(cstock), len(d_lst))]
 
-s2 = [25, 23]
-d2 = [11, 22, 15]
-sum_s2 = sum(s2)
-sum_d2 = sum(d2)
+#print("cstock, ", cstock)
+#print("c_lst, ", c_lst)
 
-#+++++ CASE 3 +++++
-c3 = [[2, 5, 1, 7, 3, 2]]
-
-s3 =  [148]
-d3 = [25, 23, 26, 31, 22, 21]
-
-sum_s3 = sum(s3)
-sum_d3 = sum(d3)
-
-#+++++ CASE 4 +++++
-c4 = [[2],
-      [5],
-      [1],
-      [7],
-      [3],
-      [2]]
-
-s4 = [25, 23, 26, 31, 22, 21]
-d4 = [148]
-sum_s4 = sum(s4)
-sum_d4 = sum(d4)
-#+++++ END DATA SECTION +++++
-"""
+sum_s = sum(s_lst)
+sum_d = sum(d_lst)
 
 def assertions(c: list, s: list[int], d: list[int]) -> None:
     """
@@ -114,59 +70,19 @@ def assertions(c: list, s: list[int], d: list[int]) -> None:
     assert len(c[0]) == len(d)    #cols must be = to number of demands
     assert sum(s) == sum(d)    #sum of supply must be = to sum of demand
 
+assertions(c_lst, s_lst, d_lst)
+
 # create matrices of zeros for decision variables
-zrs1 = [ [0] * len(c1[0]) for _ in range(len(c1))]
-zrs2 = [ [0] * len(c2[0]) for _ in range(len(c2))]
-zrs3 = [ [0] * len(c3[0]) for _ in range(len(c3))]
-zrs4 = [ [0] * len(c4[0]) for _ in range(len(c4))]
+zrs = [ [0] * len(c_lst[0]) for _ in range(len(c_lst))]
+#zrs2 = [ [0] * len(c2[0]) for _ in range(len(c2))]
+#zrs3 = [ [0] * len(c3[0]) for _ in range(len(c3))]
+#zrs4 = [ [0] * len(c4[0]) for _ in range(len(c4))]
 
 # numpy lists conversions to arrays
-c1_array = np.array(c1)
-s1_array = np.array(s1)
-d1_array = np.array(d1)
-zrs1_array = np.array(zrs1)
-
-c2_array = np.array(c2)
-s2_array = np.array(s2)
-d2_array = np.array(d2)
-zrs2_array = np.array(zrs2)
-
-c3_array = np.array(c3)
-s3_array = np.array(s3)
-d3_array = np.array(d3)
-zrs3_array = np.array(zrs3)
-
-c4_array = np.array(c4)
-s4_array = np.array(s4)
-d4_array = np.array(d4)
-zrs4_array = np.array(zrs4)
-
-"""
-print("Entry dataset, CASE 1 (costs, supply, demand):")
-print(c1_array)
-print(s1_array)
-print(d1_array)
-print()
-
-print("Entry dataset, CASE 2 (costs, supply, demand):")
-print(c2_array)
-print(s2_array)
-print(d2_array)
-print()
-
-print("Entry dataset, CASE 3 (costs, supply, demand):")
-print(c3_array)
-print(s3_array)
-print(d3_array)
-print()
-
-print("Entry dataset, CASE 4 (costs, supply, demand):")
-print(c4_array)
-print(s4_array)
-print(d4_array)
-
-print("++++++++++"'\n')
-"""
+c_array = np.array(c_lst)
+s_array = np.array(s_lst)
+d_array = np.array(d_lst)
+zrs_array = np.array(zrs)
 
 # the core code of the script
 def allocNW(s_array: np.ndarray, d_array: np.ndarray,
@@ -187,26 +103,10 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray,
                     d_array[d] = d_array[d] - zrs_array[s, d]    #update demand after alloc
     return zrs_array
 
-zrs1_alloc_array = allocNW(s1_array, d1_array, zrs1_array)
-zrs2_alloc_array = allocNW(s2_array, d2_array, zrs2_array)
-zrs3_alloc_array = allocNW(s3_array, d3_array, zrs3_array)
-zrs4_alloc_array = allocNW(s4_array, d4_array, zrs4_array)
+zrs_alloc_array = allocNW(s_array, d_array, zrs_array)
 
-"""
 print("Alloc matrix one with NWCM, ") 
-print(zrs1_alloc_array)
-
-print("Alloc matrix two with NWCM, ") 
-print(zrs2_alloc_array)
-
-print("Alloc matrix three with NWCM, ") 
-print(zrs3_alloc_array)
-
-print("Alloc matrix four with NWCM, ") 
-print(zrs4_alloc_array)
-
-print("++++++++++"'\n')
-"""
+print(zrs_alloc_array)
 
 # check the allocated quantities to match total
 def sum_check(zrs_array: np.ndarray) -> int:
@@ -220,23 +120,10 @@ def sum_check(zrs_array: np.ndarray) -> int:
         sumz = sumz + sum(zrs_array[indx])
     return sumz
 
-sum_z1 = sum_check(zrs1_alloc_array)
-sum_z2 = sum_check(zrs2_alloc_array)
-sum_z3 = sum_check(zrs3_alloc_array)
-sum_z4 = sum_check(zrs4_alloc_array)
+sum_z = sum_check(zrs_alloc_array)
 
-"""
-print("Sum of decision variables checks the sum of supply & demand matrix one, ", sum_z1
-      == sum_s1)
-print("Sum of decision variables checks the sum of supply & demand matrix two, ", sum_z2
-      == sum_s2)
-print("Sum of decision variables checks the sum of supply & demand matrix three, ", sum_z3
-      == sum_s3)
-print("Sum of decision variables checks the sum of supply & demand matrix four, ", sum_z4
-      == sum_s4)
-
-print("++++++++++"'\n')
-"""
+print("Sum of decision variables checks the sum of supply & demand matrix one, ", sum_z
+      == sum_s)
 
 # check feasibility and compute cost
 def feasibility_cost(zrs_array: np.ndarray, c_array: np.ndarray,
@@ -262,27 +149,11 @@ def feasibility_cost(zrs_array: np.ndarray, c_array: np.ndarray,
     if fbool:
         return (fbool, fn_cost)
     else:
-        print("The basic solution is degenerate. Exiting function!")
+        print("The basic solution is degenerate. Exiting script!")
         exit()
 
-"""
-print("Basic solution is feasible (one), ",
-      feasibility_cost(zrs1_alloc_array, c1_array, s1_array, d1_array)[0])
-print("NW Corner Method total allocation cost (one), ",
-      feasibility_cost(zrs1_alloc_array, c1_array, s1_array, d1_array)[1])
 
-print("Basic solution is feasible (two), ",
-      feasibility_cost(zrs2_alloc_array, c2_array, s2_array, d2_array)[0])
-print("NW Corner Method total allocation cost (two), ",
-      feasibility_cost(zrs2_alloc_array, c2_array, s2_array, d2_array)[1])
-
-print("Basic solution is feasible (three), ",
-      feasibility_cost(zrs3_alloc_array, c3_array, s3_array, d3_array)[0])
-print("NW Corner Method total allocation cost (three), ",
-      feasibility_cost(zrs3_alloc_array, c3_array, s3_array, d3_array)[1])
-
-print("Basic solution is feasible (four), ",
-      feasibility_cost(zrs4_alloc_array, c4_array, s4_array, d4_array)[0])
-print("NW Corner Method total allocation cost (four), ",
-      feasibility_cost(zrs4_alloc_array, c4_array, s4_array, d4_array)[1])
-"""
+print("Basic solution is feasible, ",
+      feasibility_cost(zrs_alloc_array, c_array, s_array, d_array)[0])
+print("NW Corner Method total allocation cost, ",
+      feasibility_cost(zrs_alloc_array, c_array, s_array, d_array)[1])
