@@ -1,0 +1,8 @@
+*.py~
+*.py.un~
+*.md~
+*.md.un~
+*.[oa]
+*.swp
+*.__pycache__
+*~
