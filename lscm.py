@@ -64,9 +64,9 @@ sum_d = sum(d_lst)
 """
 # the working data
 
-s = [20, 30, 50]  # supply
-d = [15, 37, 23, 25]  # demand
-c = [[7, 6, 4, 3], [9, 5, 2, 6], [4, 8, 5, 3]]  # cost matrix
+s_lst = [20, 30, 50]  # supply
+d_lst = [15, 37, 23, 25]  # demand
+c_lst = [[7, 6, 4, 3], [9, 5, 2, 6], [4, 8, 5, 3]]  # cost matrix
 
 def assertions(c: list, s: list[int], d: list[int]) -> None:
     """
@@ -100,16 +100,21 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray,
     Returns the modified matrix of zeros with certain zeros replaced by the
     decision variables (positive integers) in proper positions.
     """
-    for s in range(len(s_array)):
-        if s_array[s] != 0:
-            for d in range(len(d_array)):
-                if d_array[d] != 0:
-                    zrs_array[s, d] = min(s_array[s], d_array[d])
-                    s_array[s] = s_array[s] - zrs_array[s, d]    #update supply after alloc
-                    d_array[d] = d_array[d] - zrs_array[s, d]    #update demand after alloc
+
+    imin = np.argwhere(c_array == np.min(c_array))
+    vmax = np.max(c_array)
+    
+    for r in imin:
+        if s_array[r[0]] != 0 and d_array[r[1]] != 0:
+            zrs_array[r[0], r[1]] = min(s_array[r[0]], d_array[r[1]])
+            c_array[r[0], r[1]] = vmax + 1
+            s_array[r[0]] = s_array[r[0]] - zrs_array[r[0], r[1]]
+            d_array[r[1]] = d_array[r[1]] - zrs_array[r[0], r[1]]
+            imin = np.argwhere(c_array == np.min(c_array))    # select next min
+
     return zrs_array
 
-zrs_alloc_array = allocNW(s_array, d_array, zrs_array)
+zrs_alloc_array = allocNW(s_array, d_array, c_array, zrs_array)
 
 print("Alloc matrix one with NWCM, ") 
 print(zrs_alloc_array)
