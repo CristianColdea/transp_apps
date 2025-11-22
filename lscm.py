@@ -101,16 +101,34 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray,
     decision variables (positive integers) in proper positions.
     """
 
-    imin = np.argwhere(c_array == np.min(c_array))
     vmax = np.max(c_array)
-    
-    for r in imin:
-        if s_array[r[0]] != 0 and d_array[r[1]] != 0:
-            zrs_array[r[0], r[1]] = min(s_array[r[0]], d_array[r[1]])
-            c_array[r[0], r[1]] = vmax + 1
-            s_array[r[0]] = s_array[r[0]] - zrs_array[r[0], r[1]]
-            d_array[r[1]] = d_array[r[1]] - zrs_array[r[0], r[1]]
-            imin = np.argwhere(c_array == np.min(c_array))    # select next min
+    i = 0
+    while(i < 8):
+        imin = np.argwhere(c_array == np.min(c_array))
+        print("imin, ", imin)
+        print("imin len, ", len(imin))
+        if(len(imin < 2)):
+            if s_array[imin[0][0]] != 0 and d_array[imin[0][1]] != 0:
+                zrs_array[imin[0][0], imin[0][1]] = min(s_array[imin[0][1]],
+                                                  d_array[imin[0][1]])
+                c_array[imin[0][1], imin[0][1]] = vmax + 1
+                s_array[imin[0][0]] = (s_array[imin[0][0]] -
+                                       zrs_array[imin[0][1], imin[0][1]])
+                d_array[imin[0][1]] = (d_array[imin[0][1]] -
+                                       zrs_array[imin[0][0], imin[0][1]])
+        else:
+            for r in imin:
+                if(s_array[r[0]] >= d_array[r[1]]):
+                    if s_array[r[0]] != 0 and d_array[r[1]] != 0:
+                        zrs_array[r[0], r[1]] = min(s_array[r[0]], d_array[r[1]])
+                        c_array[r[0], r[1]] = vmax + 1
+                        s_array[r[0]] = s_array[r[0]] - zrs_array[r[0], r[1]]
+                        d_array[r[1]] = d_array[r[1]] - zrs_array[r[0], r[1]]
+                else:
+                    continue
+
+        print("s_array, ", s_array)
+        i += 1
 
     return zrs_array
 
