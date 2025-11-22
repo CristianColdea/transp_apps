@@ -62,6 +62,8 @@ c_lst = [cstock[i:i+len(d_lst)] for i in range(0, len(cstock), len(d_lst))]
 sum_s = sum(s_lst)
 sum_d = sum(d_lst)
 """
+# the working data
+
 s = [20, 30, 50]  # supply
 d = [15, 37, 23, 25]  # demand
 c = [[7, 6, 4, 3], [9, 5, 2, 6], [4, 8, 5, 3]]  # cost matrix
@@ -81,9 +83,6 @@ assertions(c_lst, s_lst, d_lst)
 
 # create matrices of zeros for decision variables
 zrs = [ [0] * len(c_lst[0]) for _ in range(len(c_lst))]
-#zrs2 = [ [0] * len(c2[0]) for _ in range(len(c2))]
-#zrs3 = [ [0] * len(c3[0]) for _ in range(len(c3))]
-#zrs4 = [ [0] * len(c4[0]) for _ in range(len(c4))]
 
 # numpy lists conversions to arrays
 c_array = np.array(c_lst)
@@ -93,11 +92,11 @@ zrs_array = np.array(zrs)
 
 # the core code of the script
 def allocNW(s_array: np.ndarray, d_array: np.ndarray,
-            zrs_array: np.ndarray) -> np.ndarray:
+            c_array: np.ndarray, zrs_array: np.ndarray) -> np.ndarray:
     """
-    Function to determine a BFS with NW Corner Method.
-    Takes as inputs the supply and demand arrays and the matrix of zeros with
-    the same shape as the cost matrix.
+    Function to determine a BFS with Least Unit Cost Method.
+    Takes as inputs the supply, demand and cost unit arrays and the matrix
+    of zeros with the same shape as the cost matrix.
     Returns the modified matrix of zeros with certain zeros replaced by the
     decision variables (positive integers) in proper positions.
     """
