@@ -13,15 +13,16 @@ from typing import Any
 
 #+++++ USER INTERFACE SECTION +++++
 
-print("""The following section provides the user with the mean of inputin data.
-      The required data consists of cost matrix and the supply and demand
-      lists. The matrix of cost is to be inputed by row in the form of (a1, ..., an),
-      (b1, ..., bn), ..., (z1, ..., zn), and the supply list must match the
-      number of cost matrix rows in the form of (s1, ..., sz). The demand list
-      must match the number of cost matrix columns in the form (d1, ..., dn).\n
-      A complete example data of cost, supply and demand: cost (1, 2, 3),
-      (4, 5, 6), supply (10, 15), demand (8, 8, 9). The transportation plan
-      must be balanced, i.e., sum of supplies = sum of demands.""")
+print("""The following section provides the user with the mean of inputing data.
+The required data consists of cost matrix and the supply and demand
+lists. The matrix of cost is to be inputed by row in the form of (a1, ..., an),
+(b1, ..., bn), ..., (z1, ..., zn), and the supply list must match the
+number of cost matrix rows in the form of (s1, ..., sz). The demand list
+must match the number of cost matrix columns in the form (d1, ..., dn).\n
+A complete example data of cost, supply and demand: cost (1, 2, 3),
+(4, 5, 6), supply (10, 15), demand (8, 8, 9). The transportation plan
+must be balanced, i.e., sum of supplies = sum of demands.\n
+Here goes the input data part.\n""")
 
 c = input("Enter here the matrix cost:\n> ")
 s = input("Enter here the list of supply:\n> ")
