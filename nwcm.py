@@ -75,9 +75,6 @@ assertions(c_lst, s_lst, d_lst)
 
 # create matrices of zeros for decision variables
 zrs = [ [0] * len(c_lst[0]) for _ in range(len(c_lst))]
-#zrs2 = [ [0] * len(c2[0]) for _ in range(len(c2))]
-#zrs3 = [ [0] * len(c3[0]) for _ in range(len(c3))]
-#zrs4 = [ [0] * len(c4[0]) for _ in range(len(c4))]
 
 # numpy lists conversions to arrays
 c_array = np.array(c_lst)
