@@ -120,7 +120,7 @@ def sum_check(zrs_array: np.ndarray) -> int:
 
 sum_z = sum_check(zrs_alloc_array)
 
-print("Sum of decision variables checks the sum of supply & demand matrix one, ", sum_z
+print("Sum of decision variables checks the sum of supply & demand, ", sum_z
       == sum_s)
 
 # check feasibility and compute cost
