@@ -11,11 +11,10 @@ bool, and the allocation total cost.
 import numpy as np
 from typing import Any
 
-"""
 
 #+++++ USER INTERFACE SECTION +++++
 
-print(The following section provides the user with the mean of inputing data.
+print("""The following section provides the user with the mean of inputing data.
 The required data consists of cost matrix and the supply and demand
 lists. The matrix of cost is to be inputed by row in the form of (a1, ..., an),
 (b1, ..., bn), ..., (z1, ..., zn), and the supply list must match the
@@ -24,28 +23,19 @@ must match the number of cost matrix columns in the form (d1, ..., dn).\n
 A complete example data of cost, supply and demand: cost (1, 2, 3),
 (4, 5, 6), supply (10, 15), demand (8, 8, 9). The transportation plan
 must be balanced, i.e., sum of supplies = sum of demands.\n
-Here goes the input data part.\n)
+Here goes the input data part.\n""")
 
 c = input("Enter here the matrix cost:\n> ")
 s = input("Enter here the list of supply:\n> ")
 d = input("Enter here the list of demand:\n> ")
 
-#c = "(2, 5, 1), (7, 3, 2), (1, 5, 3)"
-#s = "(25, 23, 26)"
-#d = "(31, 22, 21)"
-#print(c, s, d)
-
 s_lst = []
 for supply in s.replace("(","").replace(")","").split(","):
     s_lst.append(int(supply))
 
-#print("s_lst, ", s_lst)
-
 d_lst = []
 for supply in d.replace("(","").replace(")","").split(","):
     d_lst.append(int(supply))
-
-#print("d_lst, ", d_lst)
 
 cstock = []
 for r in c.split(", "):
@@ -56,17 +46,14 @@ for r in c.split(", "):
 
 c_lst = [cstock[i:i+len(d_lst)] for i in range(0, len(cstock), len(d_lst))]
 
-#print("cstock, ", cstock)
-#print("c_lst, ", c_lst)
-
 sum_s = sum(s_lst)
 sum_d = sum(d_lst)
-"""
+
 # the working data
 
-s_lst = [20, 30, 50]  # supply
-d_lst = [15, 37, 23, 25]  # demand
-c_lst = [[7, 6, 4, 3], [9, 5, 2, 6], [4, 8, 5, 3]]  # cost matrix
+#s_lst = [20, 30, 50]  # supply
+#d_lst = [15, 37, 23, 25]  # demand
+#c_lst = [[7, 6, 4, 3], [9, 5, 2, 6], [4, 8, 5, 3]]  # cost matrix
 
 def assertions(c: list, s: list[int], d: list[int]) -> None:
     """
@@ -91,7 +78,7 @@ d_array = np.array(d_lst)
 zrs_array = np.array(zrs)
 
 # the core code of the script
-def allocNW(s_array: np.ndarray, d_array: np.ndarray,
+def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray, zrs_array: np.ndarray) -> np.ndarray:
     """
     Function to determine a BFS with Least Unit Cost Method.
@@ -100,47 +87,56 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray,
     Returns the modified matrix of zeros with certain zeros replaced by the
     decision variables (positive integers) in proper positions.
     """
+    c_array_cp = c_array.copy()
+    vmax = np.max(c_array_cp)
+    
+    while(sum(s_array) != 0):
+        imin = np.argwhere(c_array_cp == np.min(c_array_cp))
+        i = sum(c_array_cp.shape)
+        j = sum(c_array_cp.shape)
+        flg = False
 
-    vmax = np.max(c_array)
-    cnt = 0
-    while(cnt < 8):
-        print("counter, ", cnt)
-        imin = np.argwhere(c_array == np.min(c_array))
-        print("imin, ", imin)
-        print("imin len, ", len(imin))
         for r in imin:
-            print("r[0], ", r[0])
-            print("r[1], ", r[1])
-            if(s_array[r[0]] >= d_array[r[1]]):
-                zrs_array[r[0], r[1]] = min(s_array[r[0]], d_array[r[1]])
-                c_array[r[0], r[1]] = vmax + 1
-                s_array[r[0]] = s_array[r[0]] - zrs_array[r[0], r[1]]
-                d_array[r[1]] = d_array[r[1]] - zrs_array[r[0], r[1]]
-                cnt += 1
-                break
-        continue
+            i = r[0]
+            j = r[1]
+            if(s_array[i] >= d_array[j]):
+                flg = True
+                if(s_array[i] != 0 and d_array[j] != 0):
+                    zrs_array[i, j] = min(s_array[i], d_array[j])
+                    s_array[i] = s_array[i] - zrs_array[i, j]
+                    d_array[j] = d_array[j] - zrs_array[i, j]
+                    if(s_array[i] == 0):
+                       c_array_cp[i] = vmax + 1
+                    if(d_array[j] == 0):
+                        c_array_cp[:, j] = vmax + 1
+                    
+                    break
+          
+               
+        imin = np.argwhere(c_array_cp == np.min(c_array_cp))
+
+        if flg == True:
+            continue
+         
+        # if supply less than demand
+        i0 = imin[0, 0]
+        j0 = imin[0, 1]
+        zrs_array[i0, j0] = min(s_array[i0], d_array[j0])
+        s_array[i0] = s_array[i0] - zrs_array[i0, j0]
+        d_array[j0] = d_array[j0] - zrs_array[i0, j0]
         
-        i = imin[0, 0]
-        j = imin[0, 1]
+        if(s_array[i0] == 0):
+            c_array_cp[i0] = vmax + 1
+        if(d_array[j0] == 0):
+            c_array_cp[:, j0] = vmax + 1
 
-        zrs_array[i, j] = min(s_array[i], d_array[j])
-        c_array[i, j] = vmax + 1
-        s_array[i] = s_array[i] - zrs_array[i, j]
-        d_array[j] = d_array[j] - zrs_array[i, j]
-
-        imin = np.argwhere(c_array == np.min(c_array))
-             
-
-        print("s_array, ", s_array)
-        print("d_array, ", d_array)
-        print("c_array, ", c_array)
-        cnt += 1
-
+        imin = np.argwhere(c_array_cp == np.min(c_array_cp))
+                
     return zrs_array
 
-zrs_alloc_array = allocNW(s_array, d_array, c_array, zrs_array)
+zrs_alloc_array = allocLUC(s_array, d_array, c_array, zrs_array)
 
-print("Alloc matrix one with NWCM, ") 
+print("Alloc matrix one with LUCM, ") 
 print(zrs_alloc_array)
 
 # check the allocated quantities to match total
@@ -157,8 +153,8 @@ def sum_check(zrs_array: np.ndarray) -> int:
 
 sum_z = sum_check(zrs_alloc_array)
 
-print("Sum of decision variables checks the sum of supply & demand matrix one, ", sum_z
-      == sum_s)
+print("Sum of decision variables checks the sum of supply & demand, ", sum_z
+      == sum(s_lst))
 
 # check feasibility and compute cost
 def feasibility_cost(zrs_array: np.ndarray, c_array: np.ndarray,
@@ -190,5 +186,5 @@ def feasibility_cost(zrs_array: np.ndarray, c_array: np.ndarray,
 
 print("Basic solution is feasible, ",
       feasibility_cost(zrs_alloc_array, c_array, s_array, d_array)[0])
-print("NW Corner Method total allocation cost, ",
+print("Least Unit Cost Method total allocation cost, ",
       feasibility_cost(zrs_alloc_array, c_array, s_array, d_array)[1])
