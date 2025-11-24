@@ -84,7 +84,6 @@ sum_d = sum(d_lst)
 # The assertions function remains the same, but it is called after successful parsing.
 
 def assertions(c: List[List[int]], s: List[int], d: List[int]) -> None:
-    # ... (Your original assertions function)
     # Using the standard type hint List instead of list for compatibility with python versions < 3.9
     
     """
@@ -113,7 +112,7 @@ c_array = np.array(c_lst)
 s_array = np.array(s_lst)
 d_array = np.array(d_lst)
 # More Pythonic way to create the zero array
-zrs_array = np.zeros_like(c_array, dtype=int) 
+# zrs_array = np.zeros_like(c_array, dtype=int) 
 # The rest of the script (allocLUC, etc.) follows here...
 
 def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
