@@ -158,7 +158,7 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray,
 zrs_alloc_array = allocNW(s_array, d_array, zrs_array)
 
 print("\n### Allocation Results ###")
-print("Alloc matrix (Decision Variables) with LUCM:") 
+print("Alloc matrix (Decision Variables) with NWCM:") 
 print(zrs_alloc_array)
 
 # ... (rest of the script follows: sum_check, feasibility_cost) ...
