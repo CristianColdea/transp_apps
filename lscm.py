@@ -150,12 +150,44 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
         # Iterate over all minimum cost cells (handles ties implicitly)
         # We process the first available minimum cost cell and break to restart the search.
         
-        allocated_in_cycle = False
+        allocated_in_cycle = False    #safety for while loop ...
+        is_preferred = False    #supply >= demand is preferred allocation
+       
+        # search for preferred allocs
+        if min_indices.shape[0] != 1: #more minima
+            for i_pref, j_pref in min_indices:
+                if (s_cp[i_pref] >= d_cp[j_pref]):
+                    if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
+                        is_preferred = True #preferred alloc possible
+                        break #retain alloc position
+                
+        if is_preferred == True:
+            allocation_quantity = d_cp[j_pref]
+            allocation_matrix[i_pref, j_pref] = allocation_quantity
+            # Update remaining supply and demand
+            s_cp[i_pref] -= allocation_quantity
+            d_cp[j_pref] -= allocation_quantity
+            
+            # --- Block Satisfied Rows/Columns (Setting cost to a high value) ---
+            
+            # If the supply source 'i_pref' is exhausted, block the entire row
+            if s_cp[i_pref] == 0:
+                c_cp[i_pref, :] = BLOCK_COST
+            
+            # If the demand destination 'j_pref' is satisfied, block the entire column
+            if d_cp[j_pref] == 0:
+                c_cp[:, j_pref] = BLOCK_COST
+            
+            allocated_in_cycle = True
+
+            continue
+        
         
         for i, j in min_indices:
             # i = source row index (supply)
             # j = destination column index (demand)
-
+            
+            
             # Determine the maximum possible allocation (min of remaining supply and demand)
             allocation_quantity = min(s_cp[i], d_cp[j])
             
@@ -195,7 +227,7 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
              # For a professional script, you might raise an error here.
              print("Warning: Allocation loop stuck. Check data.")
              break
-
+        
     return allocation_matrix
 
 # Example usage within the main script structure:
