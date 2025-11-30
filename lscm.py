@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Any
+from typing import List, Tuple, Any
 import ast # Required for safe string evaluation
 
 # +++++ USER INTERFACE AND INPUT HANDLING SECTION +++++
