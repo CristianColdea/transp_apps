@@ -146,8 +146,8 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray) -> np.ndarray:
             for d in range(len(d_cp)):
                 if d_cp[d] != 0:
                     allocation_matrix[s, d] = min(s_cp[s], d_cp[d])
-                    s_cp[s]-= zrs_array[s, d]    #update supply after alloc
-                    d_cp[d]-= zrs_array[s, d]    #update demand after alloc
+                    s_cp[s]-= allocation_matrix[s, d]    #update supply after alloc
+                    d_cp[d]-= allocation_matrix[s, d]    #update demand after alloc
     return allocation_matrix
 
 # Example usage within the main script structure:
