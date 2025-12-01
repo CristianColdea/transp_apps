@@ -111,8 +111,7 @@ except ValueError as e:
 c_array = np.array(c_lst)
 s_array = np.array(s_lst)
 d_array = np.array(d_lst)
-# More Pythonic way to create the zero array
-# zrs_array = np.zeros_like(c_array, dtype=int) 
+
 # The rest of the script (allocLUC, etc.) follows here...
 
 def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
@@ -153,7 +152,7 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
         allocated_in_cycle = False    #safety for while loop ...
         is_preferred = False    #supply >= demand is preferred allocation
        
-        # search for preferred allocs
+        # 3. search for preferred allocs
         if min_indices.shape[0] != 1: #more minima
             for i_pref, j_pref in min_indices:
                 if (s_cp[i_pref] >= d_cp[j_pref]):
@@ -161,6 +160,7 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
                         is_preferred = True #preferred alloc possible
                         break #retain alloc position
                 
+        # 4. Allocate to preferred position, if any
         if is_preferred == True:
             allocation_quantity = d_cp[j_pref]
             allocation_matrix[i_pref, j_pref] = allocation_quantity
@@ -183,6 +183,7 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
             continue
         
         
+        # 5. Allocate normaly ...
         for i, j in min_indices:
             # i = source row index (supply)
             # j = destination column index (demand)
@@ -234,9 +235,6 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
 
 # ... (data input and assertions section from previous answer) ...
 
-# The working data arrays
-# c_array, s_array, d_array are already defined before this call.
-# Note: zrs_array is no longer passed to the function!
 
 # The core function call is simplified
 zrs_alloc_array = allocLUC(s_array, d_array, c_array)
