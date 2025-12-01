@@ -140,6 +140,7 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray,
     s_cp = s_array.copy()  # Working copy of Supply
     d_cp = d_array.copy()  # Working copy of Demand
 
+    # 2. Make the allocation according to the NW method
     for s in range(len(s_cp)):
         if s_cp[s] != 0:
             for d in range(len(d_cp)):
