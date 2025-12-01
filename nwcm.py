@@ -102,13 +102,13 @@ def assertions(c: List[List[int]], s: List[int], d: List[int]) -> None:
     of the cost matrix with supply and demand lists/arrays.
     Takes as input the cost matrix, supply and demand arrays.
     Signals problems and aborts execution.
+    """
     if len(c) != len(s):
         raise ValueError(f"Dimensional error: Cost matrix has {len(c)} rows, but Supply list has {len(s)} elements.")
     if len(c[0]) != len(d):
         raise ValueError(f"Dimensional error: Cost matrix has {len(c[0])} columns, but Demand list has {len(d)} elements.")
     if sum(s) != sum(d):
         raise ValueError(f"Transportation problem is **unbalanced**: Sum of Supply ({sum(s)}) != Sum of Demand ({sum(d)}).")
-        """
 
 
 try:
