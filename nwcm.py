@@ -122,12 +122,9 @@ except ValueError as e:
 c_array = np.array(c_lst)
 s_array = np.array(s_lst)
 d_array = np.array(d_lst)
-# More Pythonic way to create the zero array
-zrs_array = np.zeros_like(c_array, dtype=int) 
 
 # the core code of the script
-def allocNW(s_array: np.ndarray, d_array: np.ndarray,
-            zrs_array: np.ndarray) -> np.ndarray:
+def allocNW(s_array: np.ndarray, d_array: np.ndarray) -> np.ndarray:
     """
     Function to determine a BFS with NW Corner Method.
     Takes as inputs the supply and demand arrays and the matrix of zeros with
@@ -139,24 +136,24 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray,
     # 1. Ensure Copies for Side-Effect-Free Operation
     s_cp = s_array.copy()  # Working copy of Supply
     d_cp = d_array.copy()  # Working copy of Demand
+    
+    # 2. Generate the properly shaped zeros array
+    allocation_matrix = np.zeros_like(c_array, dtype=int) 
 
-    # 2. Make the allocation according to the NW method
+    # 3. Make the allocation according to the NW method
     for s in range(len(s_cp)):
         if s_cp[s] != 0:
             for d in range(len(d_cp)):
                 if d_cp[d] != 0:
-                    zrs_array[s, d] = min(s_cp[s], d_cp[d])
+                    allocation_matrix[s, d] = min(s_cp[s], d_cp[d])
                     s_cp[s]-= zrs_array[s, d]    #update supply after alloc
                     d_cp[d]-= zrs_array[s, d]    #update demand after alloc
-    return zrs_array
+    return allocation_matrix
 
 # Example usage within the main script structure:
 
-# The working data arrays
-# c_array, s_array, d_array are already defined before this call.
-
 # The core function call
-zrs_alloc_array = allocNW(s_array, d_array, zrs_array)
+zrs_alloc_array = allocNW(s_array, d_array)
 
 print("\n### Allocation Results ###")
 print("Alloc matrix (Decision Variables) with NWCM:") 
