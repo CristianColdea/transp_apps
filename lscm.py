@@ -100,11 +100,11 @@ def assertions(c: List[List[int]], s: List[int], d: List[int]) -> None:
         raise ValueError(f"Transportation problem is **unbalanced**: Sum of Supply ({sum(s)}) != Sum of Demand ({sum(d)}).")
 
 
-try:
-    assertions(c_lst, s_lst, d_lst)
-except ValueError as e:
-    print(f"\n🛑 Validation Error: {e}")
-    exit(1)
+    try:
+        assertions(c_lst, s_lst, d_lst)
+    except ValueError as e:
+        print(f"\n🛑 Validation Error: {e}")
+        exit(1)
 
 
 # create matrices and arrays for working data
@@ -134,17 +134,37 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     Raises value error if the array of minimum indices doesn't have at least
     two pair of values.
     """
+
+    # 1. Ensure Copies for Side-Effect-Free Operation
+    s_cp = s_array.copy()
+    d_cp = d_array.copy()
+    c_cp = c_array.copy()
+    min_indices_cp = min_indices.copy()
+
+    masses = []    #list to store the masses associated with least cost
+
+    # 1. Loop the unit cost array for least values and select the associated
+    # masses
+    for i, j in min_indices:
+        masses.append(min(s_cp[i], d_cp[j]))
+    for i_pref, j_pref in min_indices_cp:
+        if
+        if (s_cp[i_pref] >= d_cp[j_pref]):
+            if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
+                is_preferred = True #preferred alloc possible
+                    break #retain alloc position
     
+    # 2. Raises error if least unit cost not a Tie
+    if min_indices.shape[0] < 2:
+        raise ValueError(f"Dimensional error:
+                           least unit cost doesn't yield a Tie.")
 
+    try:
+        allocPREF(s_array, d_array, c_array, min_indices)
 
-    # 1. Loop the unit cost array for least values and decide on alloc
-    if min_indices.shape[0] != 1: #check for more minima
-        for i_pref, j_pref in min_indices:
-                if (s_cp[i_pref] >= d_cp[j_pref]):
-                    if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
-                        is_preferred = True #preferred alloc possible
-                        break #retain alloc position
-
+    except ValueError as e:
+        print(f"\n🛑 Validation Error: {e}")
+        exit(1)
 
 
 def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
