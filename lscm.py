@@ -114,6 +114,36 @@ d_array = np.array(d_lst)
 
 # The rest of the script (allocLUC, etc.) follows here...
 
+"""
+If the search operation for the least unit cost yields a Tie, there is a 
+preferred allocation according to the following two criteria (in this order):
+
+1) allocate to the least cost unit that allows to move the higher quantity,
+2) allocate where the supply exceeds demand.
+For this purpose a specialized function is to be coded.
+"""
+
+def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
+              c_array: np.ndarray, min_indices: np.array) -> Tuple:
+    """
+    Determines the preferred allocation if there are least unit cost Tie.
+    
+    Takes as inputs the supply, demand, unit cost and min_indices arrays.
+    Returns a tuple with indexes (i_pref, j_pref) of preferred allocation.
+    """
+    
+
+
+    # 1. Loop the unit cost array for least values and decide on alloc
+    if min_indices.shape[0] != 1: #check for more minima
+        for i_pref, j_pref in min_indices:
+                if (s_cp[i_pref] >= d_cp[j_pref]):
+                    if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
+                        is_preferred = True #preferred alloc possible
+                        break #retain alloc position
+
+
+
 def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
     """
