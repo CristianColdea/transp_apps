@@ -140,14 +140,16 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     d_cp = d_array.copy()
     c_cp = c_array.copy()
     min_indices_cp = min_indices.copy()
+    
+    #array to store the masses associated with least cost
+    masses = np.zeros(len(s_cp)*len(d_cp))
 
-    masses = []    #list to store the masses associated with least cost
-
-    # 1. Loop the unit cost array for least values and select the associated
-    # masses
+    # 2. Loop the least unit cost indices array and store the associated masses
     for i, j in min_indices:
-        masses.append(min(s_cp[i], d_cp[j]))
-    for i_pref, j_pref in min_indices_cp:
+        masses = masses.append(masses, min(s_cp[i], d_cp[j]))
+
+    # 3. Select the greatest mass to be allocated and its indices
+    max_value = np.where(masses == np.max(masses))
         if
         if (s_cp[i_pref] >= d_cp[j_pref]):
             if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
