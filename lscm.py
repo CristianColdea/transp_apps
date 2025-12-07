@@ -130,6 +130,9 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     
     Takes as inputs the supply, demand, unit cost and min_indices arrays.
     Returns a tuple with indexes (i_pref, j_pref) of preferred allocation.
+
+    Raises value error if the array of minimum indices doesn't have at least
+    two pair of values.
     """
     
 
@@ -190,8 +193,11 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
                         is_preferred = True #preferred alloc possible
                         break #retain alloc position
                 
-        # 4. Allocate to preferred position, if any
-        if is_preferred == True:
+        # 4. Allocate to preferred position, if this is the case
+        #    by calling allocPREF() function
+        if min_indices.shape[0] != 1:
+            (i_pref, j_pref) = allocPREF(s_array, d_array, c_array, min_indices)
+
             allocation_quantity = d_cp[j_pref]
             allocation_matrix[i_pref, j_pref] = allocation_quantity
             # Update remaining supply and demand
