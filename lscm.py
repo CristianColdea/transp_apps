@@ -129,6 +129,7 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     Determines the preferred allocation if there are least unit cost Tie.
     
     Takes as inputs the supply, demand, unit cost and min_indices arrays.
+
     Returns a tuple with indexes (i_pref, j_pref) of preferred allocation.
 
     Raises value error if the array of minimum indices doesn't have at least
@@ -145,18 +146,19 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     masses = np.zeros(len(s_cp)*len(d_cp))
 
     # 2. Loop the least unit cost indices array and store the associated masses
-    for i, j in min_indices:
-        masses = masses.append(masses, min(s_cp[i], d_cp[j]))
+    for i, j in min_indices_cp:
+        masses = masses.append(masses, min(s_cp[i], d_cp[j])) #to be alloc
 
-    # 3. Select the greatest mass to be allocated and its indices
+    # 3. Select the greatest tonnage to be allocated and its indices
     max_value = np.where(masses == np.max(masses))
-        if
-        if (s_cp[i_pref] >= d_cp[j_pref]):
-            if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
-                is_preferred = True #preferred alloc possible
-                    break #retain alloc position
-    
-    # 2. Raises error if least unit cost not a Tie
+        if max_value.shape[0] != 1: #more than one maximum tonnage
+            if (s_cp[i] >= d_cp[j]): #alloc when S is greater than D
+                if(s_cp[i] > 0 and d_cp[j] > 0):#non-zero S and D
+                    return (i, j)
+        else: #only one maximum tonnage
+            return (i, j)
+
+    # 2. Raises error if least unit cost indices not a Tie
     if min_indices.shape[0] < 2:
         raise ValueError(f"Dimensional error:
                            least unit cost doesn't yield a Tie.")
