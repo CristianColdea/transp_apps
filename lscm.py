@@ -150,13 +150,14 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
         masses = masses.append(masses, min(s_cp[i], d_cp[j])) #to be alloc
 
     # 3. Select the greatest tonnage to be allocated and its indices
-    max_value = np.where(masses == np.max(masses))
-        if max_value.shape[0] != 1: #more than one maximum tonnage
-            if (s_cp[i] >= d_cp[j]): #alloc when S is greater than D
-                if(s_cp[i] > 0 and d_cp[j] > 0):#non-zero S and D
-                    return (i, j)
+    max_value_indices = np.where(masses == np.max(masses))
+    for i_pref, j_pref in max_value_indices:
+        if max_value_indices.shape[0] != 1: #more than one maximum tonnage
+            if (s_cp[i_pref] >= d_cp[j_pref]): #alloc when S is greater than D
+                if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
+                    return (i_pref, j_pref)
         else: #only one maximum tonnage
-            return (i, j)
+            return (i_pref, j_pref)
 
     # 2. Raises error if least unit cost indices not a Tie
     if min_indices.shape[0] < 2:
