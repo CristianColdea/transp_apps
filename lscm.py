@@ -147,14 +147,14 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
 
     # 2. Loop the least unit cost indices array and store the associated masses
     for i, j in min_indices_cp:
-        masses[(i, j)] = min(s_cp[i], d_cp[j])]
+        masses[(i, j)] = min(s_cp[i], d_cp[j])
 
     # 3. Get the indices of least unit cost with greatest tonnage
     max_ton = max(masses.values())   #extract the Max value out of dict
     min_indsQmax = [k for k in masses if masses[k] == max_ton] #list of inds
 
     # 4. Allocate when there is only one max tonnage
-    if(len(min_indsQmax) < 2:
+    if(len(min_indsQmax) < 2):
        return min_indsQmax
     # 5. More than one max tonnage, check if S > D
     else:
@@ -168,8 +168,8 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     
     # 5. Raises error if least unit cost indices not a Tie
     if min_indices.shape[0] < 2:
-        raise ValueError(f"Dimensional error:
-                           least unit cost doesn't yield a Tie.")
+        raise ValueError("Min_indices of least unit costs doesn't yield a Tie."
+                f"There are vaues: {min_indices.shape[0]}")
 
     try:
         allocPREF(s_array, d_array, c_array, min_indices)
