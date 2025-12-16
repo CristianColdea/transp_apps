@@ -142,32 +142,31 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     c_cp = c_array.copy()
     min_indices_cp = min_indices.copy()
     
-    #array to store the masses associated with least cost
-    masses = np.zeros(len(s_cp)*len(d_cp))
+    #dict to store the indices and masses associated with least cost
+    masses = {}
 
     # 2. Loop the least unit cost indices array and store the associated masses
     for i, j in min_indices_cp:
-        masses = masses.append(masses, min(s_cp[i], d_cp[j])) #to be alloc
+        masses[(i, j)] = min(s_cp[i], d_cp[j])]
 
-    # 3. Select the greatest tonnage when S > D and its indices
-    max_value_indices = np.argwhere(masses == np.max(masses))
-    is_quantity = False #bool to spot if S >= D
-    for i_pref, j_pref in max_value_indices:
-        if max_value_indices.shape[0] != 1: #more than one maximum tonnage
-            if (s_cp[i_pref] >= d_cp[j_pref]): #alloc when S is greater than D
-                if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
-                    is_quatity = True
-                    break #retain indices with S > D
+    # 3. Get the indices of least unit cost with greatest tonnage
+    max_ton = max(masses.values())   #extract the Max value out of dict
+    min_indsQmax = [k for k in masses if masses[k] == max_ton] #list of inds
+
+    # 4. Allocate when there is only one max tonnage
+    if(len(min_indsQmax) < 2:
+       return min_indsQmax
+    # 5. More than one max tonnage, check if S > D
+    else:
+        for i,j in min_indsQmax:
+            if s_cp[i] >= d_cp[j]:
+                break
+                return(i,j)
+
+        return min_indsQmax[0]
     
-    # 4. Select the allocation position to be returned
-    if is_quantity: #more maxima tonnage AND S > D
-        return (i_pref, j_pref)
-    else: # return first pair of indices
-
-        if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
-            return (tuple(min_indices_cp[0,:]))
-
-    # 2. Raises error if least unit cost indices not a Tie
+    
+    # 5. Raises error if least unit cost indices not a Tie
     if min_indices.shape[0] < 2:
         raise ValueError(f"Dimensional error:
                            least unit cost doesn't yield a Tie.")
