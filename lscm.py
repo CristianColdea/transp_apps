@@ -155,14 +155,17 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
 
     # 4. Allocate when there is only one max tonnage
     if(len(min_indsQmax) < 2):
+        print(f"min_indsQmax for only one alloc possible: {min_indsQmax}.")
        return min_indsQmax
     # 5. More than one max tonnage, check if S > D
     else:
         for i,j in min_indsQmax:
             if s_cp[i] >= d_cp[j]:
+                print(f"More Qmax, S > D: {i,j}.")
                 break
                 return(i,j)
 
+        print(f"More Qmax, S == D: {min_indsQmax[0]}.")
         return min_indsQmax[0]
     
     
