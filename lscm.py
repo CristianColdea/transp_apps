@@ -216,15 +216,7 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
         
         allocated_in_cycle = False    #safety for while loop ...
         is_preferred = False    #supply >= demand is preferred allocation
-       
-        # 3. search for preferred allocs
-        if min_indices.shape[0] != 1: #more minima
-            for i_pref, j_pref in min_indices:
-                if (s_cp[i_pref] >= d_cp[j_pref]):
-                    if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
-                        is_preferred = True #preferred alloc possible
-                        break #retain alloc position
-                
+                       
         # 4. Allocate to preferred position, if this is the case
         #    by calling allocPREF() function
         if min_indices.shape[0] != 1:
