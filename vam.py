@@ -125,6 +125,65 @@ d_array = np.array(d_lst)
 # zrs_array = np.zeros_like(c_array, dtype=int) 
 
 
+def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
+              c_array: np.ndarray, min_indices: np.array) -> Tuple:
+    """
+    Determines the preferred allocation if there are least unit cost Tie.
+    
+    Takes as inputs the supply, demand, unit cost and min_indices arrays.
+
+    Returns a tuple with indexes (i_pref, j_pref) of preferred allocation.
+
+    Raises value error if the array of minimum indices doesn't have at least
+    two pair of values.
+    """
+
+    # 1. Ensure Copies for Side-Effect-Free Operation
+    s_cp = s_array.copy()
+    d_cp = d_array.copy()
+    c_cp = c_array.copy()
+    min_indices_cp = min_indices.copy()
+    #print("s_cp, ", s_cp)
+    #print("d_cp, ", d_cp)
+    #print("c_cp, ", c_cp)
+    #print("min_indices_cp, ", min_indices_cp)
+    
+    #dict to store the indices and masses associated with least cost
+    masses = {}
+
+    # 2. Loop the least unit cost indices array and store the associated masses
+    for i, j in min_indices_cp:
+        masses[(i, j)] = min(s_cp[i], d_cp[j])
+
+    # 3. Get the indices of least unit cost with greatest tonnage
+    max_ton = max(masses.values())   #extract the Max value out of dict
+    min_indsQmax = [k for k in masses if masses[k] == max_ton] #list of inds
+
+    # 4. Allocate when there is only one max tonnage
+    if(len(min_indsQmax) < 2):
+        # print(f"min_indsQmax for only one alloc possible: {min_indsQmax}.")
+        return min_indsQmax[0]
+    # 5. More than one max tonnage, check if S > D
+    else:
+        for i,j in min_indsQmax:
+            if s_cp[i] >= d_cp[j]:
+                # print(f"More Qmax, S > D: {i,j}.")
+                return(i,j)
+        # print(f"More Qmax, S == D: {min_indsQmax[0]}.")
+        return min_indsQmax[0]
+    
+    
+    # 5. Raises error if least unit cost indices not a Tie
+    if min_indices.shape[0] < 2:
+        raise ValueError("Min_indices of least unit costs doesn't yield a Tie."
+                f"There are vaues: {min_indices.shape[0]}")
+
+    try:
+        allocPREF(s_array, d_array, c_array, min_indices)
+
+    except ValueError as e:
+        print(f"\n🛑 Validation Error: {e}")
+        exit(1)
 
 def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
