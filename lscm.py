@@ -141,10 +141,10 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     d_cp = d_array.copy()
     c_cp = c_array.copy()
     min_indices_cp = min_indices.copy()
-    print("s_cp, ", s_cp)
-    print("d_cp, ", d_cp)
-    print("c_cp, ", c_cp)
-    print("min_indices_cp, ", min_indices_cp)
+    #print("s_cp, ", s_cp)
+    #print("d_cp, ", d_cp)
+    #print("c_cp, ", c_cp)
+    #print("min_indices_cp, ", min_indices_cp)
     
     #dict to store the indices and masses associated with least cost
     masses = {}
