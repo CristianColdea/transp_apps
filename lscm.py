@@ -141,6 +141,10 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     d_cp = d_array.copy()
     c_cp = c_array.copy()
     min_indices_cp = min_indices.copy()
+    print("s_cp, ", s_cp)
+    print("d_cp, ", d_cp)
+    print("c_cp, ", c_cp)
+    print("min_indices_cp, ", min_indices_cp)
     
     #dict to store the indices and masses associated with least cost
     masses = {}
@@ -155,17 +159,15 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
 
     # 4. Allocate when there is only one max tonnage
     if(len(min_indsQmax) < 2):
-        print(f"min_indsQmax for only one alloc possible: {min_indsQmax}.")
-       return min_indsQmax
+        # print(f"min_indsQmax for only one alloc possible: {min_indsQmax}.")
+        return min_indsQmax[0]
     # 5. More than one max tonnage, check if S > D
     else:
         for i,j in min_indsQmax:
             if s_cp[i] >= d_cp[j]:
-                print(f"More Qmax, S > D: {i,j}.")
-                break
+                # print(f"More Qmax, S > D: {i,j}.")
                 return(i,j)
-
-        print(f"More Qmax, S == D: {min_indsQmax[0]}.")
+        # print(f"More Qmax, S == D: {min_indsQmax[0]}.")
         return min_indsQmax[0]
     
     
@@ -218,14 +220,15 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
         # We process the first available minimum cost cell and break to restart the search.
         
         allocated_in_cycle = False    #safety for while loop ...
-        is_preferred = False    #supply >= demand is preferred allocation
-                       
+                               
         # 4. Allocate to preferred position, if this is the case
         #    by calling allocPREF() function
         if min_indices.shape[0] != 1:
             (i_pref, j_pref) = allocPREF(s_array, d_array, c_array, min_indices)
 
-            allocation_quantity = d_cp[j_pref]
+            # print("i_pref, j_pref: ", (i_pref, j_pref))
+
+            allocation_quantity = min(s_cp[i_pref], d_cp[j_pref])
             allocation_matrix[i_pref, j_pref] = allocation_quantity
             # Update remaining supply and demand
             s_cp[i_pref] -= allocation_quantity
