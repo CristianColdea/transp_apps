@@ -124,6 +124,8 @@ d_array = np.array(d_lst)
 # More Pythonic way to create the zero array
 # zrs_array = np.zeros_like(c_array, dtype=int) 
 
+
+
 def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
     """
