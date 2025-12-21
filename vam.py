@@ -185,12 +185,35 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
         print(f"\n🛑 Validation Error: {e}")
         exit(1)
 
-def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
+def selectDIFF(uc_array: np.ndarray) -> Tuple:
+    """
+    Analyzes the Unit Cost array (i.e., row or column) passed as arg.
+
+    Returns a Tuple with the index of (the least positive unit cost position,
+    the difference between the two Least Positive Unit Costs).
+    """
+
+    #1. Ensure array copy for unwanted side effects
+    uc_cp = uc_array.copy()
+
+    #2. Extract the difference between two of the Least Unit Costs
+    diffs = [luc for luc in np.sort(uc_cp) if luc > 0]
+    diff = diffs[1] - diffs[0]
+
+    #3. Get the index of Least Positive Unit Cost
+    c = np.argwhere(diffs[0] == uc_cp)[0][0]
+
+    print((c, diff))
+
+    return (c, diff)
+
+def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
     """
     Determines a Basic Feasible Solution (BFS) using the Least Unit Cost Method.
 
     Takes as inputs the supply, demand, and unit cost arrays.
+    
     Returns the allocation matrix (decision variables).
     """
     # 1. Ensure Copies for Side-Effect-Free Operation
@@ -202,17 +225,27 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
     # Using np.zeros_like is cleaner and more NumPy idiomatic
     allocation_matrix = np.zeros_like(c_array, dtype=int)
     
-    # How to block satisfied sources/destinations for VAM?
-    # A value larger than any possible cost to effectively block satisfied sources/destinations
-    BLOCK_COST = np.max(c_cp) + 1 
+    # A unit cost equal to -1 to effectively block satisfied sources/destinations
+    BLOCK_COST = -1 
     
     # Core loop continues until all supply is exhausted (which means demand is also zero,
     # due to the balancing assertion)
     while np.sum(s_cp) > 0:
         
-        # 2. Find the minimum cost in the *current* cost matrix
-        min_cost = np.min(c_cp)
-        
+        # 2. Call the speciliased function to extract the difference between
+        #    the two least unit cost on rows and columns of the Unit Cost
+        #    Matrix (UCM). Store the least unit cost on row/column pair indexes
+        #    (as key) and difference (as value) in a dict.
+
+        ddiffs = {}    #dict to store {(r,c):diff}
+        for r in range(len(c_cp)):    #iterate over rows of UCM
+            print("row, ", c_cp[r])
+            (c, diff) = selectDIFF(c_cp[r])
+            print("c, ", c)
+            print("diff, ", diff)
+            ddiffs[(r, c)] = diff
+        print("Diffs and indexes dict, ", ddiffs)
+
         # Get all (row, column) indices where the cost equals the current minimum
         # np.argwhere returns a list of [row, col] arrays
         min_indices = np.argwhere(c_cp == min_cost)
