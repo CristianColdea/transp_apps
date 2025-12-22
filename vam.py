@@ -198,9 +198,12 @@ def selectDIFF(uc_array: np.ndarray) -> Tuple:
 
     #2. Extract the difference between two of the Least Unit Costs
     diffs = [luc for luc in np.sort(uc_cp) if luc > 0]
-    diff = diffs[1] - diffs[0]
+    if len(diffs) > 1: #there are at least two Positive Least Unit Costs
+        diff = diffs[1] - diffs[0]
+    else: # only one Positive Least Unit Cost
+        diff = 0
 
-    #3. Get the index of Least Positive Unit Cost
+    #3. Get the index of Positive Least Unit Cost
     c = np.argwhere(diffs[0] == uc_cp)[0][0]
 
     print((c, diff))
@@ -244,7 +247,15 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
             print("c, ", c)
             print("diff, ", diff)
             ddiffs[(r, c)] = diff
-        print("Diffs and indexes dict, ", ddiffs)
+
+        print("Diffs and indexes dict after rows, ", ddiffs)
+        for c in range(len(c_cp.T)):    #iterate over columns of UCM
+            print("col, ", c_cp.T[c])
+            (r, diff) = selectDIFF(c_cp.T[c])
+            print("r, ", r)
+            print("diff, ", diff)
+            ddiffs[(r, c)] = diff
+        print("Diffs and indexes dict after cols, ", ddiffs)
 
         # Get all (row, column) indices where the cost equals the current minimum
         # np.argwhere returns a list of [row, col] arrays
