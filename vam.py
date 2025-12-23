@@ -213,7 +213,7 @@ def selectDIFF(uc_array: np.ndarray) -> Tuple:
 def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
     """
-    Determines a Basic Feasible Solution (BFS) using the Least Unit Cost Method.
+    Determines a Basic Feasible Solution (BFS) using the Vogel Alloc Method.
 
     Takes as inputs the supply, demand, and unit cost arrays.
     
@@ -240,42 +240,33 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
         #    Matrix (UCM). Store the least unit cost on row/column pair indexes
         #    (as key) and difference (as value) in a dict.
 
-        ddiffs = {}    #dict to store {(r,c):diff}
+        ddiffsR = {}    #dict to store {(r,c):diff} on rows
         for r in range(len(c_cp)):    #iterate over rows of UCM
             print("row, ", c_cp[r])
             (c, diff) = selectDIFF(c_cp[r])
             print("c, ", c)
             print("diff, ", diff)
-            ddiffs[(r, c)] = diff
+            ddiffsR[(r, c)] = diff
+        print("Diffs and indexes dict after rows, ", ddiffsR)
 
-        print("Diffs and indexes dict after rows, ", ddiffs)
+        ddiffsC = {}    #dict to store {(r,c):diff} on cols
         for c in range(len(c_cp.T)):    #iterate over columns of UCM
             print("col, ", c_cp.T[c])
             (r, diff) = selectDIFF(c_cp.T[c])
             print("r, ", r)
             print("diff, ", diff)
-            ddiffs[(r, c)] = diff
-        print("Diffs and indexes dict after cols, ", ddiffs)
-
-        # Get all (row, column) indices where the cost equals the current minimum
-        # np.argwhere returns a list of [row, col] arrays
-        min_indices = np.argwhere(c_cp == min_cost)
-        
+            ddiffsC[(r, c)] = diff
+        print("Diffs and indexes dict after cols, ", ddiffsC)
+ 
         # 3. Handle Ties and Allocation
-        # Iterate over all minimum cost cells (handles ties implicitly)
-        # We process the first available minimum cost cell and break to restart the search.
         
         allocated_in_cycle = False    #safety for while loop ...
-        is_preferred = False    #supply >= demand is preferred allocation
        
-        # 3. search for preferred allocs
-        if min_indices.shape[0] != 1: #more minima
-            for i_pref, j_pref in min_indices:
-                if (s_cp[i_pref] >= d_cp[j_pref]):
-                    if(s_cp[i_pref] > 0 and d_cp[j_pref] > 0):#non-zero S and D
-                        is_preferred = True #preferred alloc possible
-                        break #retain alloc position
-                
+        # 4. search for preferred allocs
+        
+
+
+
         # 4. Allocate to preferred position, if possible
         if is_preferred == True:
             allocation_quantity = d_cp[j_pref]
