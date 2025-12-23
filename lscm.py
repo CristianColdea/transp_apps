@@ -215,19 +215,12 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
         # np.argwhere returns a list of [row, col] arrays
         min_indices = np.argwhere(c_cp == min_cost)
         
-        # 3. Handle Ties and Allocation
-        # Iterate over all minimum cost cells (handles ties implicitly)
-        # We process the first available minimum cost cell and break to restart the search.
-        
         allocated_in_cycle = False    #safety for while loop ...
                                
-        # 4. Allocate to preferred position, if this is the case
+        # 3. Allocate to preferred position, if this is the case
         #    by calling allocPREF() function
         if min_indices.shape[0] != 1:
             (i_pref, j_pref) = allocPREF(s_array, d_array, c_array, min_indices)
-
-            # print("i_pref, j_pref: ", (i_pref, j_pref))
-
             allocation_quantity = min(s_cp[i_pref], d_cp[j_pref])
             allocation_matrix[i_pref, j_pref] = allocation_quantity
             # Update remaining supply and demand
@@ -249,7 +242,7 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
             continue
         
         
-        # 5. Allocate normaly ...
+        # 4. Allocate normaly ...
         for i, j in min_indices:
             # i = source row index (supply)
             # j = destination column index (demand)
