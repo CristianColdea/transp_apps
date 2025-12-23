@@ -200,8 +200,8 @@ def selectDIFF(uc_array: np.ndarray) -> Tuple:
     diffs = [luc for luc in np.sort(uc_cp) if luc > 0]
     if len(diffs) > 1: #there are at least two Positive Least Unit Costs
         diff = diffs[1] - diffs[0]
-    else: # only one Positive Least Unit Cost
-        diff = 0
+    else: # only one Positive Unit Cost
+        diff = -1
 
     #3. Get the index of Positive Least Unit Cost
     c = np.argwhere(diffs[0] == uc_cp)[0][0]
