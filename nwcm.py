@@ -28,6 +28,10 @@ Input format example:
 - Supply List S: (10, 15) or [10, 15]
 - Demand List D: (8, 8, 9) or [8, 8, 9]
 
+For **special cases** please use the following format:
+- Any List with one element: (2, ) or [2, ]
+- Any Matrix with one element/row or col: (1, ), (2, ) or [[1, ], [2, ]]
+
 The transportation plan must be **balanced**: sum of supplies = sum of demands.
 """)
 
