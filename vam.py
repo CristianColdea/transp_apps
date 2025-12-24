@@ -238,7 +238,11 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
         # 2. Call the speciliased function to extract the difference between
         #    the two least unit cost on rows and columns of the Unit Cost
         #    Matrix (UCM). Store the least unit cost on row/column pair indexes
-        #    (as key) and difference (as value) in a dict.
+        #    (as key) and difference (as value) in dicts, on rows/cols.
+        #    The two dicts are necessary due to two perspectives regarding
+        #    deltas (i.e., on rows and cols), being possible to have the same
+        #    pair of indices (i, j) (the dict keys) where the Least Cost Unit
+        #    is located, on rows and cols.
 
         ddiffsR = {}    #dict to store {(r,c):diff} on rows
         for r in range(len(c_cp)):    #iterate over rows of UCM
@@ -261,8 +265,16 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
         # 3. Handle Ties and Allocation
         
         allocated_in_cycle = False    #safety for while loop ...
+
+        maxRows = max(ddifsR.values())
+        maxesR = [k for k, v in ddifsR.items() if v == maxRows]
+        print("maxesR, ", maxesR)
        
-        # 4. search for preferred allocs
+        maxCols = max(ddifsC.values())
+        maxesC = [k for k, v in ddifsC.items() if v == maxCols]
+        print("maxesC, ", maxesC)
+
+        # 4. Search for preferred allocs
         
 
 
