@@ -126,7 +126,7 @@ For this purpose a specialized function is to be coded.
 def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
               c_array: np.ndarray, min_indices: np.array) -> Tuple:
     """
-    Determines the preferred allocation if there are least unit cost Tie.
+    Determines the preferred allocation if there is Least Unit Cost Tie.
     
     Takes as inputs the supply, demand, unit cost and min_indices arrays.
 
@@ -141,10 +141,6 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     d_cp = d_array.copy()
     c_cp = c_array.copy()
     min_indices_cp = min_indices.copy()
-    #print("s_cp, ", s_cp)
-    #print("d_cp, ", d_cp)
-    #print("c_cp, ", c_cp)
-    #print("min_indices_cp, ", min_indices_cp)
     
     #dict to store the indices and masses associated with least cost
     masses = {}
