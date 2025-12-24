@@ -18,10 +18,6 @@ Input format example:
 - Supply List S: (10, 15) or [10, 15]
 - Demand List D: (8, 8, 9) or [8, 8, 9]
 
-For **special cases** please use the following format:
-- Any List with one element: (2, ) or [2, ]
-- Any Matrix with one element/row or col: (1, ), (2, ) or [[1, ], [2, ]]
-
 The transportation plan must be **balanced**: sum of supplies = sum of demands.
 """)
 
@@ -35,8 +31,16 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
         # This safely evaluates a string containing a Python literal structure (list/tuple).
 
         # Parsing Supply and Demand lists
-        s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
-        d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
+        if type(ast.literal_eval(s_str.strip())) == tuple:
+            s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
+        else:
+            s_lst: List[int] = [ast.literal_eval(s_str.strip())]
+
+        if type(ast.literal_eval(d_str.strip())) == tuple:
+            d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
+
+        else:
+            d_lst: List[int] = [ast.literal_eval(d_str.strip())]
 
         # Parsing Cost Matrix (handling multiple rows/tuples)
         c_lst: List[List[int]] = []
@@ -65,7 +69,10 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
             
             # Reconstruct the tuple/list structure before evaluation for safety/compatibility
             evaluated_row = ast.literal_eval(f"({cleaned_r_str})") 
-            c_lst.append(list(evaluated_row))
+            if type(evaluated_row) == tuple:
+                c_lst.append(list(evaluated_row))
+            else:
+                c_lst.append([evaluated_row])
         
         return c_lst, s_lst, d_lst
 
