@@ -42,7 +42,6 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
         # Parsing Supply and Demand lists
         s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
         d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
-
         # Parsing Cost Matrix (handling multiple rows/tuples)
         c_lst: List[List[int]] = []
         # Normalizing input: replace outer brackets/parentheses, then split by row separator
@@ -69,8 +68,12 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
                 continue
             
             # Reconstruct the tuple/list structure before evaluation for safety/compatibility
+        
             evaluated_row = ast.literal_eval(f"({cleaned_r_str})") 
-            c_lst.append(list(evaluated_row))
+            if type(evaluated_row) == tuple:
+                c_lst.append(list(evaluated_row))
+            else:
+                c_lst.append([evaluated_row])
         
         return c_lst, s_lst, d_lst
 
