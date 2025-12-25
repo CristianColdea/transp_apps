@@ -129,7 +129,7 @@ d_array = np.array(d_lst)
 
 
 def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
-              c_array: np.ndarray, min_indices: np.array) -> Tuple:
+              c_array: np.ndarray, min_indices: np.ndarray) -> Tuple:
     """
     Determines the preferred allocation if there are least unit cost Tie.
     
