@@ -41,8 +41,17 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
         # This safely evaluates a string containing a Python literal structure (list/tuple).
 
         # Parsing Supply and Demand lists
-        s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
-        d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
+        if type(ast.literal_eval(s_str.strip())) == tuple:
+            s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
+        else:
+            s_lst: List[int] = [ast.literal_eval(s_str.strip())]
+
+        if type(ast.literal_eval(d_str.strip())) == tuple:
+            d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
+
+        else:
+            d_lst: List[int] = [ast.literal_eval(d_str.strip())]
+
 
         # Parsing Cost Matrix (handling multiple rows/tuples)
         c_lst: List[List[int]] = []
@@ -70,6 +79,7 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
                 continue
             
             # Reconstruct the tuple/list structure before evaluation for safety/compatibility
+        
             evaluated_row = ast.literal_eval(f"({cleaned_r_str})") 
             c_lst.append(list(evaluated_row))
         
