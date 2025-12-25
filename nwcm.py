@@ -44,13 +44,13 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
         if type(ast.literal_eval(s_str.strip())) == tuple:
             s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
         else:
-            s_lst: List[int] = [ast.literal_eval(s_str.strip())]
+            s_lst = [ast.literal_eval(s_str.strip())]
 
         if type(ast.literal_eval(d_str.strip())) == tuple:
             d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
 
         else:
-            d_lst: List[int] = [ast.literal_eval(d_str.strip())]
+            d_lst = [ast.literal_eval(d_str.strip())]
 
 
         # Parsing Cost Matrix (handling multiple rows/tuples)

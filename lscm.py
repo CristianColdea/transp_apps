@@ -34,13 +34,13 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
         if type(ast.literal_eval(s_str.strip())) == tuple:
             s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
         else:
-            s_lst: List[int] = [ast.literal_eval(s_str.strip())]
+            s_lst = [ast.literal_eval(s_str.strip())]
 
         if type(ast.literal_eval(d_str.strip())) == tuple:
             d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
 
         else:
-            d_lst: List[int] = [ast.literal_eval(d_str.strip())]
+            d_lst = [ast.literal_eval(d_str.strip())]
 
         # Parsing Cost Matrix (handling multiple rows/tuples)
         c_lst: List[List[int]] = []
@@ -135,7 +135,7 @@ For this purpose a specialized function is to be coded.
 """
 
 def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
-              c_array: np.ndarray, min_indices: np.array) -> Tuple:
+              c_array: np.ndarray, min_indices: np.ndarray) -> Tuple:
     """
     Determines the preferred allocation if there is Least Unit Cost Tie.
     
@@ -146,7 +146,7 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
     Raises value error if the array of minimum indices doesn't have at least
     two pair of values.
     """
-
+    
     # 1. Ensure Copies for Side-Effect-Free Operation
     s_cp = s_array.copy()
     d_cp = d_array.copy()
