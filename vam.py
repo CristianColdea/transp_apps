@@ -277,7 +277,16 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
         maxesC = [k for k, v in ddifsC.items() if v == maxCols]
         print("maxesC, ", maxesC)
 
-        # 4. Search for preferred allocs
+        # 4. Search for preferred allocs. The differentiation is either on
+        #    equal max deltas or equal min unit costs
+        
+        # 4..a. Select the max delta
+        if maxRows > maxCols: #delta(s) on row are greater ...
+            if len(maxesR > 1): #more max deltas on rows
+
+
+        # 4.a. If only one unit cost is positive on row/col
+
         
 
 
