@@ -128,8 +128,68 @@ d_array = np.array(d_lst)
 # zrs_array = np.zeros_like(c_array, dtype=int) 
 
 
-def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
-              c_array: np.ndarray, min_indices: np.ndarray) -> Tuple:
+def allocPREFCOST(s_array: np.ndarray, d_array: np.ndarray,
+                  c_array: np.ndarray, min_indices: np.ndarray) -> Tuple:
+    """
+    Determines the preferred allocation if there are least unit cost Tie.
+    
+    Takes as inputs the supply, demand, unit cost and min_indices arrays.
+
+    Returns a tuple with indexes (i_pref, j_pref) of preferred allocation.
+
+    Raises value error if the array of minimum indices doesn't have at least
+    two pair of values.
+    """
+
+    # 1. Ensure Copies for Side-Effect-Free Operation
+    s_cp = s_array.copy()
+    d_cp = d_array.copy()
+    c_cp = c_array.copy()
+    min_indices_cp = min_indices.copy()
+    #print("s_cp, ", s_cp)
+    #print("d_cp, ", d_cp)
+    #print("c_cp, ", c_cp)
+    #print("min_indices_cp, ", min_indices_cp)
+    
+    #dict to store the indices and masses associated with least cost
+    masses = {}
+
+    # 2. Loop the least unit cost indices array and store the associated masses
+    for i, j in min_indices_cp:
+        masses[(i, j)] = min(s_cp[i], d_cp[j])
+
+    # 3. Get the indices of least unit cost with greatest tonnage
+    max_ton = max(masses.values())   #extract the Max value out of dict
+    min_indsQmax = [k for k in masses if masses[k] == max_ton] #list of inds
+
+    # 4. Allocate when there is only one max tonnage
+    if(len(min_indsQmax) < 2):
+        # print(f"min_indsQmax for only one alloc possible: {min_indsQmax}.")
+        return min_indsQmax[0]
+    # 5. More than one max tonnage, check if S > D
+    else:
+        for i,j in min_indsQmax:
+            if s_cp[i] >= d_cp[j]:
+                # print(f"More Qmax, S > D: {i,j}.")
+                return(i,j)
+        # print(f"More Qmax, S == D: {min_indsQmax[0]}.")
+        return min_indsQmax[0]
+    
+    
+    # 5. Raises error if least unit cost indices not a Tie
+    if min_indices.shape[0] < 2:
+        raise ValueError("Min_indices of least unit costs doesn't yield a Tie."
+                f"There are vaues: {min_indices.shape[0]}")
+
+    try:
+        allocPREF(s_array, d_array, c_array, min_indices)
+
+    except ValueError as e:
+        print(f"\n🛑 Validation Error: {e}")
+        exit(1)
+
+def allocPREFDIF(s_array: np.ndarray, d_array: np.ndarray,
+                  c_array: np.ndarray, min_indices: np.ndarray) -> Tuple:
     """
     Determines the preferred allocation if there are least unit cost Tie.
     
@@ -194,6 +254,7 @@ def selectDIFF(uc_array: np.ndarray) -> Tuple:
 
     Returns a Tuple with the index of (the least positive unit cost position,
     the difference between the two Least Positive Unit Costs).
+    What if there are many least positive unit cost positions?
     """
 
     #1. Ensure array copy for unwanted side effects
@@ -283,6 +344,11 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
         # 4..a. Select the max delta
         if maxRows > maxCols: #delta(s) on row are greater ...
             if len(maxesR > 1): #more max deltas on rows
+                # (i_pref, j_pref) = allocPREF(s_cp, d_cp, c_cp)
+            else: #only one max delta on rows
+                (i, j) = maxesR[0]
+                allocation_quantity = min(s_cp[i], d_cp[j])
+                allocation_matrix[i, j] = allocation_quantity
 
 
         # 4.a. If only one unit cost is positive on row/col
