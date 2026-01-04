@@ -230,6 +230,7 @@ def getUCMIN(*arr_lst):
         for i in range(len(items)):
             print("items[", i, "] is ", items[i])
             ind = [ind for ind in range(len(items[i])) if items[i][ind] == minUC]
+            print(f"ind is {ind}")
             for local_ind in ind:
                 arr_inds.append((i, local_ind))
     else:   #or just a single array is passed as arg
@@ -237,18 +238,19 @@ def getUCMIN(*arr_lst):
         print("minUC, ", minUC)
         local_ind = np.argwhere(items == minUC)
         print(f"local_ind type {type(local_ind[0])}")
-        arr_inds.append(local_ind)
+        arr_inds = local_ind[0][0]
 
     return (arr_inds, minUC)
 
-a = np.array([3, 1, 4])
+a = np.array([3, 1, 1])
 b = np.array([2, 4, 5])
 lst = []
 lst.append(a)
 lst.append(b)
 d = np.array([2, 1, 3])
-#print(getUCMIN(lst))
-print(getUCMIN(d))
+print(getUCMIN(lst))
+#print(getUCMIN(d))
+print()
 
 def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
