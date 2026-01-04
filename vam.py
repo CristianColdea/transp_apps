@@ -218,14 +218,14 @@ def getUCMIN(*arr_lst):
     Returns the index and the value of minUC.
     """
 
-    items = arr_lst[0]
+    items = arr_lst[0]  #select the first element of *args tuple
     print(f"items {items}")
     print(f"items type {type(items)}")
     arr_inds = []
     if type(items) == list:  #if a list of arrays is passed as arg
-        minARR = np.min(items, axis=0)
+        minARR = np.min(items, axis=0) #get the min val array across arrays
         print(f"minARR is {minARR}")
-        minUC = np.min(minARR)
+        minUC = np.min(minARR) #get the min val out of minARR
         print(f"minUC is {minUC}")
         for i in range(len(items)):
             print("items[", i, "] is ", items[i])
