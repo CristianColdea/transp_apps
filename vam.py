@@ -211,11 +211,18 @@ def selectDIFF(uc_array: np.ndarray) -> int:
     return diff
 
 def getUCMIN(*arr_lst):
+    """
+    Selects the minimum Unit Cost (minUC) out of one or many np array
+    (i.e., rows or cols of max delta).
+
+    Returns the index and the value of minUC.
+    """
+
     items = arr_lst[0]
     print(f"items {items}")
     print(f"items type {type(items)}")
     arr_inds = []
-    if type(items) == list:
+    if type(items) == list:  #if a list of arrays is passed as arg
         minARR = np.min(items, axis=0)
         print(f"minARR is {minARR}")
         minUC = np.min(minARR)
@@ -225,7 +232,7 @@ def getUCMIN(*arr_lst):
             ind = [ind for ind in range(len(items[i])) if items[i][ind] == minUC]
             for local_ind in ind:
                 arr_inds.append((i, local_ind))
-    else:
+    else:   #or just a single array is passed as arg
         minUC = np.min(items)
         print("minUC, ", minUC)
         local_ind = np.argwhere(items == minUC)
@@ -239,7 +246,9 @@ b = np.array([2, 4, 5])
 lst = []
 lst.append(a)
 lst.append(b)
-print(getUCMIN(lst))
+d = np.array([2, 1, 3])
+#print(getUCMIN(lst))
+print(getUCMIN(d))
 
 def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
