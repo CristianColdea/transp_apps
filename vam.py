@@ -321,7 +321,7 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
         #    equal max deltas or equal min unit costs
         
         # 4..a. Select the max delta
-        if maxRows >= maxCols: #delta(s) on row are greater ...
+        if maxRows > maxCols: #delta(s) on row are greater ...
             if len(maxesR) > 1: #more max deltas on rows
                 maxesALLR = [] #initialize to append to
                 for item in maxesR:
