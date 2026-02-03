@@ -277,9 +277,10 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
     # due to the balancing assertion)
     while np.sum(s_cp) > 0:
         
-        # 2. Call the speciliased function to extract the difference between
-        #    the two least unit cost on rows and columns of the Unit Cost
-        #    Matrix (UCM). Store the least unit cost on row/column pair indexes
+        # 2. Call the speciliazed function to extract the difference between
+        #    the least and next-to-the-least unit costs on rows and columns of
+        #    the Unit Cost Matrix (UCM).
+        #    Store the least unit cost on row/column pair indexes
         #    (as key) and difference (as value) in dicts, on rows/cols.
         #    The two dicts are necessary due to two perspectives regarding
         #    deltas (i.e., on rows and cols), being possible to have the same
