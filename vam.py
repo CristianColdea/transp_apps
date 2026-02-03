@@ -248,7 +248,7 @@ lst = []
 lst.append(a)
 lst.append(b)
 d = np.array([2, 1, 3])
-print(getUCMIN(lst))
+print("returned from func, ", getUCMIN(lst))
 #print(getUCMIN(d))
 print()
 
@@ -324,8 +324,8 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
         if maxRows > maxCols: #delta(s) on row are greater ...
             if len(maxesR) > 1: #more max deltas on rows
                 maxesALLR = [] #initialize to append to
-                for item in maxesR:
-                    maxesALLR.append(c_cp[item])
+                for item in maxesR:  #cycle on rows only
+                    maxesALLR.append(c_cp[item]) #rows with max delta
                 print("maxesALLR, ", maxesALLR)
                 indxR = getUCMIN(maxesALLR)
                 print("indxR of tuples, ", indxR)
