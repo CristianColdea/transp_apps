@@ -198,7 +198,7 @@ def selectDIFF(uc_array: np.ndarray) -> int:
     Returns the difference between the two Least Positive Unit Costs.
     """
 
-    #1. Ensure array copy for unwanted side effects
+    #1. Ensure unit cost array copy for unwanted side effects
     uc_cp = uc_array.copy()
 
     #2. Extract the difference between two of the Least Unit Costs
@@ -210,47 +210,21 @@ def selectDIFF(uc_array: np.ndarray) -> int:
 
     return diff
 
-def getUCMIN(*arr_lst):
+def getUCMIN(ddiffs: dict, c_cp: np.ndarray) -> List:
     """
-    Selects the minimum Unit Cost (minUC) out of one or many np array
-    (i.e., rows or cols of max delta).
+    Selects the minimum Unit Cost (minUC)index out of deltas dict.
 
-    Returns the index and the value of minUC.
+    Returns the index of the value of minimum unit cost - minUC
+    on max delta row/col.
     """
 
-    items = arr_lst[0]  #select the first element of *args tuple
-    print(f"items {items}")
-    print(f"items type {type(items)}")
-    arr_inds = []
-    if type(items) == list:  #if a list of arrays is passed as arg
-        minARR = np.min(items, axis=0) #get the min val array across arrays
-        print(f"minARR is {minARR}")
-        minUC = np.min(minARR) #get the min val out of minARR
-        print(f"minUC is {minUC}")
-        for i in range(len(items)):
-            print("items[", i, "] is ", items[i])
-            ind = [ind for ind in range(len(items[i])) if items[i][ind] == minUC]
-            print(f"ind is {ind}")
-            for local_ind in ind:
-                arr_inds.append((i, local_ind))
-    else:   #or just a single array is passed as arg
-        minUC = np.min(items)
-        print("minUC, ", minUC)
-        local_ind = np.argwhere(items == minUC)
-        print(f"local_ind type {type(local_ind[0])}")
-        arr_inds = local_ind[0][0]
+    maxDELTA = max(ddiffs.values())
+    maxIND = [k for k, v in ddiffs.items() if v == maxDELTA]
+    print(f"maxDELTA {maxDELTA}")
+    print(f"maxIND {maxIND}")
 
+        
     return (arr_inds, minUC)
-
-a = np.array([3, 1, 1])
-b = np.array([2, 4, 5])
-lst = []
-lst.append(a)
-lst.append(b)
-d = np.array([2, 1, 3])
-print("returned from func, ", getUCMIN(lst))
-#print(getUCMIN(d))
-print()
 
 def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
@@ -289,69 +263,34 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
 
         ddiffsR = {}    #dict to store {r: diff} on rows
         for r in range(len(c_cp)):    #iterate over rows of UCM
-            print("row, ", c_cp[r])
+            #print("row, ", c_cp[r])
             diff = selectDIFF(c_cp[r])
-            print("diffR, ", diff)
+            #print("diffR, ", diff)
             ddiffsR[r] = diff
         print("Diffs dict after rows, ", ddiffsR)
 
         ddiffsC = {}    #dict to store {c: diff} on cols
         for c in range(len(c_cp.T)):    #iterate over columns of UCM
-            print("col, ", c_cp.T[c])
+            #print("col, ", c_cp.T[c])
             diff = selectDIFF(c_cp.T[c])
-            print("diffC, ", diff)
+            #print("diffC, ", diff)
             ddiffsC[c] = diff
         print("Diffs dict after cols, ", ddiffsC)
  
         # 3. Handle Ties and Allocation
         
         allocated_in_cycle = False    #safety for while loop ...
-
-        maxRows = max(ddiffsR.values())
-        maxesR = [k for k, v in ddiffsR.items() if v == maxRows]
-        print("maxesR, ", maxesR)
-        print("maxRows, ", maxRows)
        
-        maxCols = max(ddiffsC.values())
-        maxesC = [k for k, v in ddiffsC.items() if v == maxCols]
-        print("maxesC, ", maxesC)
-        print("maxCols, ", maxCols)
-
         # 4. Search for preferred allocs. The differentiation is either on
         #    equal max deltas or equal min unit costs
         
         # 4..a. Select the max delta
-        if maxRows > maxCols: #delta(s) on row are greater ...
-            if len(maxesR) > 1: #more max deltas on rows
-                maxesALLR = [] #initialize to append to
-                for item in maxesR:  #cycle on rows only
-                    maxesALLR.append(c_cp[item]) #rows with max delta
-                print("maxesALLR, ", maxesALLR)
-                indxR = getUCMIN(maxesALLR)
-                print("indxR of tuples, ", indxR)
-                (i_pref, j_pref) = allocPREF(s_cp, d_cp, c_cp)
-            else: #only one max delta on rows
-                i = maxesR[0]
-                (indxs, minUC) = getUCMIN(c_cp[i])
-                print("indxs, ", indxs, " and minUC, ", minUC)
-                j = indxs[0]
-                allocation_quantity = min(s_cp[i], d_cp[j])
-                allocation_matrix[i, j] = allocation_quantity
-                print(f"alloc_quantity {allocation_quantity}")
-                print(f"i = {i},", f"j = {j}")
-                # update Supply/Demand after allocation
-                s_cp[i] -= allocation_quantity
-                d_cp[j] -= allocation_quantity
-        else: #delta(s) on row are less than those on cols
-            if maxRows < maxCols:
-                if len(maxesC > 1): #more max deltas on cols
-                    inC = [0] #initialize to append to
-                    for item in maxesC:
-                        maxesALLC = np.append(inC, c_cp.T[item])
-                    maxesALLC = np.trim_zeros(maxesALLC)
-                    minUCC = np.min(minUCC)
+               
+        # update Supply/Demand after allocation
+        s_cp[i] -= allocation_quantity
+        d_cp[j] -= allocation_quantity
 
-
+        
         # 4.a. If only one unit cost is positive on row/col
 
         
