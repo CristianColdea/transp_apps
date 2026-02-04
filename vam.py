@@ -210,21 +210,43 @@ def selectDIFF(uc_array: np.ndarray) -> int:
 
     return diff
 
-def getUCMIN(ddiffs: dict, c_cp: np.ndarray) -> List:
+def getUCMIN(ddiffs: dict, c_cp: np.ndarray) -> Tuple:
     """
     Selects the minimum Unit Cost (minUC)index out of deltas dict.
 
     Returns the index of the value of minimum unit cost - minUC
     on max delta row/col.
     """
+    import numpy as np
 
     maxDELTA = max(ddiffs.values())
     maxIND = [k for k, v in ddiffs.items() if v == maxDELTA]
     print(f"maxDELTA {maxDELTA}")
     print(f"maxIND {maxIND}")
-
+    
+    storeIND = []
+    storeUCMIN = []
+    for ind in maxIND:
+        w_lst = [i for i in c_cp[ind] if i > -1]
+        print(f"w_lst {w_lst}")
+        storeIND.append(ind)
+        storeUCMIN.append(min(w_lst))
+    
+    print(f"storeIND {storeIND}")
+    print(f"storeUCMIN {storeUCMIN}")
+    ind_minUC = storeUCMIN.index(min(storeUCMIN))
+    print(f"ind_minUC {ind_minUC}")
         
-    return (arr_inds, minUC)
+    return (storeIND[ind_minUC],
+            list(c_cp[storeIND[ind_minUC]]).index(min(c_cp[storeIND[ind_minUC]])),
+            storeUCMIN[ind_minUC])
+
+"""
+dctCHK = {0:1, 1:3, 2:0, 3:3}
+c_cp = c_array.copy()
+
+print(f"Check returned {getUCMIN(dctCHK, c_cp.T)}")
+"""
 
 def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
@@ -277,13 +299,23 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
             ddiffsC[c] = diff
         print("Diffs dict after cols, ", ddiffsC)
  
-        # 3. Handle Ties and Allocation
+        # 3. Handle Ties and Allocation.The differentiation is either on
+        #    equal max deltas or equal min unit costs
+        ir,jr, ucminr = getUCMIN(ddiffsR, c_cp)
+        print(f"ir {ir}")
+        print(f"jr {jr}")
+        print(f"ucminr {ucminr}")
+
+        jc, ic, ucminc = getUCMIN(ddiffsC, c_cp.T)
+        print(f"ic {ic}")
+        print(f"jc {jc}")
+        print(f"ucminc {ucminc}")
+
+        
         
         allocated_in_cycle = False    #safety for while loop ...
        
-        # 4. Search for preferred allocs. The differentiation is either on
-        #    equal max deltas or equal min unit costs
-        
+        # 4. Search for preferred allocs.         
         # 4..a. Select the max delta
                
         # update Supply/Demand after allocation
