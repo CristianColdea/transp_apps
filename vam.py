@@ -11,7 +11,9 @@ import numpy as np
 from typing import List, Tuple, Any
 import ast # Required for safe string evaluation
 
+
 # +++++ USER INTERFACE AND INPUT HANDLING SECTION +++++
+
 
 def get_user_input() -> tuple[List[List[int]], List[int], List[int]]:
     """
@@ -98,6 +100,7 @@ sum_d = sum(d_lst)
 
 # The assertions function remains the same, but it is called after successful parsing.
 
+
 def assertions(c: List[List[int]], s: List[int], d: List[int]) -> None:
     # ... (Your original assertions function)
     # Using the standard type hint List instead of list for compatibility with python versions < 3.9
@@ -122,7 +125,6 @@ except ValueError as e:
     print(f"\n🛑 Validation Error: {e}")
     exit(1)
 
-
 # create matrices and arrays for working data
 c_array = np.array(c_lst)
 s_array = np.array(s_lst)
@@ -130,66 +132,6 @@ d_array = np.array(d_lst)
 # More Pythonic way to create the zero array
 # zrs_array = np.zeros_like(c_array, dtype=int) 
 
-
-def alloc_pref(s_array: np.ndarray, d_array: np.ndarray,
-                  c_array: np.ndarray, min_indices: np.ndarray) -> Tuple:
-    """
-    Determines the preferred allocation if there are least unit cost Tie.
-    
-    Takes as inputs the supply, demand, unit cost and min_indices arrays.
-
-    Returns a tuple with indexes (i_pref, j_pref) of preferred allocation.
-
-    Raises value error if the array of minimum indices doesn't have at least
-    two pair of values.
-    """
-
-    # 1. Ensure Copies for Side-Effect-Free Operation
-    s_cp = s_array.copy()
-    d_cp = d_array.copy()
-    c_cp = c_array.copy()
-    min_indices_cp = min_indices.copy()
-    #print("s_cp, ", s_cp)
-    #print("d_cp, ", d_cp)
-    #print("c_cp, ", c_cp)
-    #print("min_indices_cp, ", min_indices_cp)
-    
-    #dict to store the indices and masses associated with least cost
-    masses = {}
-
-    # 2. Loop the least unit cost indices array and store the associated masses
-    for i, j in min_indices_cp:
-        masses[(i, j)] = min(s_cp[i], d_cp[j])
-
-    # 3. Get the indices of least unit cost with greatest tonnage
-    max_ton = max(masses.values())   #extract the Max value out of dict
-    min_indsQmax = [k for k in masses if masses[k] == max_ton] #list of inds
-
-    # 4. Allocate when there is only one max tonnage
-    if(len(min_indsQmax) < 2):
-        # print(f"min_indsQmax for only one alloc possible: {min_indsQmax}.")
-        return min_indsQmax[0]
-    # 5. More than one max tonnage, check if S > D
-    else:
-        for i,j in min_indsQmax:
-            if s_cp[i] >= d_cp[j]:
-                # print(f"More Qmax, S > D: {i,j}.")
-                return(i,j)
-        # print(f"More Qmax, S == D: {min_indsQmax[0]}.")
-        return min_indsQmax[0]
-    
-    
-    # 5. Raises error if least unit cost indices not a Tie
-    if min_indices.shape[0] < 2:
-        raise ValueError("Min_indices of least unit costs doesn't yield a Tie."
-                f"There are vaues: {min_indices.shape[0]}")
-
-    try:
-        alloc_pref(s_array, d_array, c_array, min_indices)
-
-    except ValueError as e:
-        print(f"\n🛑 Validation Error: {e}")
-        exit(1)
 
 def select_diff(uc_array: np.ndarray) -> int:
     """
@@ -202,7 +144,7 @@ def select_diff(uc_array: np.ndarray) -> int:
     uc_cp = uc_array.copy()
 
     #2. Extract the difference between two of the Least Unit Costs
-    diffs = [luc for luc in np.sort(uc_cp) if luc > 0]
+    diffs = [l_uc for l_uc in np.sort(uc_cp) if l_uc > 0]
     if len(diffs) > 1: #there are at least two Positive Least Unit Costs
         diff = diffs[1] - diffs[0]
     else: # only one Positive Unit Cost
@@ -210,7 +152,8 @@ def select_diff(uc_array: np.ndarray) -> int:
 
     return diff
 
-def get_ucmin(ddiffs: dict, c_cp: np.ndarray) -> Tuple:
+
+def get_uc_min(ddiffs: dict, c_cp: np.ndarray) -> Tuple:
     """
     Selects the minimum Unit Cost index out of deltas dict.
 
@@ -220,26 +163,28 @@ def get_ucmin(ddiffs: dict, c_cp: np.ndarray) -> Tuple:
     import numpy as np
 
     max_delta = max(ddiffs.values())
-    max_ind = [k for k, v in ddiffs.items() if v == max_delta]
+    # get the index of row/col of max_delta
+    max_ind: list[int] = [k for k, v in ddiffs.items() if v == max_delta]
     print(f"max_delta {max_delta}")
     print(f"max_ind {max_ind}")
     
-    store_ind = []
-    store_ucmin = []
-    for ind in max_ind:
-        w_lst = [i for i in c_cp[ind] if i > -1]
+    store_ind: list[int] = []
+    store_uc_min: list[int] = []
+    for ind in max_ind:  # for each max_delta row/col
+        # get available unit cost list on max_delta row/col
+        w_lst: list[int] = [uc for uc in c_cp[ind] if uc > -1]
         print(f"w_lst {w_lst}")
         store_ind.append(ind)
-        store_ucmin.append(min(w_lst))
+        store_uc_min.append(min(w_lst))  # append the min uc available
     
     print(f"store_ind {store_ind}")
-    print(f"store_ucmin {store_ucmin}")
-    ind_minuc = store_ucmin.index(min(store_ucmin))
-    print(f"ind_minuc {ind_minuc}")
+    print(f"store_uc_min {store_uc_min}")
+    ind_uc_min: int = store_uc_min.index(min(store_uc_min))
+    print(f"ind_uc_min {ind_uc_min}")
         
-    return (store_ind[ind_minuc],
-            list(c_cp[store_ind[ind_minuc]]).index(min(c_cp[store_ind[ind_minuc]])),
-            store_ucmin[ind_minuc])
+    return (store_ind[ind_uc_min],
+            list(c_cp[store_ind[ind_uc_min]]).index(min(c_cp[store_ind[ind_uc_min]])),
+            store_uc_min[ind_uc_min])
 
 """
 dctCHK = {0:1, 1:3, 2:0, 3:3}
@@ -247,6 +192,7 @@ c_cp = c_array.copy()
 
 print(f"Check returned {get_ucmin(dctCHK, c_cp.T)}")
 """
+
 
 def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
@@ -301,17 +247,27 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
  
         # 3. Handle Ties and Allocation.The differentiation is either on
         #    equal max deltas or equal min unit costs
-        i_r,j_r, ucmin_r = get_ucmin(ddiffs_r, c_cp)
+        # 3.a. Get the indexes of min unit cost on max_delta rows/cols
+        #      by calling get_uc_min function
+        i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
         print(f"i_r {i_r}")
         print(f"j_r {j_r}")
-        print(f"ucmin_r {ucmin_r}")
+        print(f"uc_min_r {uc_min_r}")
 
-        j_c, i_c, ucmin_c = get_ucmin(ddiffs_c, c_cp.T)
+        j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
         print(f"i_c {i_c}")
         print(f"j_c {j_c}")
-        print(f"ucmin_c {ucmin_c}")
-
+        print(f"uc_min_c {uc_min_c}")
         
+        # 3.b. Select where to allocate based on deltas
+        max_delta_row: int = max(ddiffs_r.values())
+        max_delta_col: int = max(ddiffs_c.values())
+
+        # delta_row greater than delta_col
+        if max_delta_row > max_delta_col:
+            i: int = i_r
+            j: int = j_r
+            # allocate i if only one uc available on row        
         
         allocated_in_cycle = False    #safety for while loop ...
        
