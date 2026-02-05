@@ -143,26 +143,28 @@ def select_diff(uc_array: np.ndarray) -> int:
     #1. Ensure unit cost array copy for unwanted side effects
     uc_cp = uc_array.copy()
 
-    #2. Extract the difference between two of the Least Unit Costs
-    diffs = [l_uc for l_uc in np.sort(uc_cp) if l_uc > -1]
-    if len(diffs) > 1: #there are at least two Positive Least Unit Costs
-        diff = diffs[1] - diffs[0]
-    else: # only one Positive Unit Cost
-        diff = -2
+    # 2. Extract the difference between two of the least unit costs
+    # 2.a. Extract true (not zeroed out by previous allocs) unit cost list
+    diffs: list[int] = [l_uc for l_uc in np.sort(uc_cp) if l_uc > -1]
+    if len(diffs) > 1: #there are at least two positive least unit costs
+        diff: int = diffs[1] - diffs[0]
+    else: # only one positive unit cost
+        diff = -1
 
     return diff
 
 
-def get_uc_min(ddiffs: dict, c_cp: np.ndarray) -> Tuple:
+def get_uc_min(ddiffs: dict, c_cp: np.ndarray) -> tuple:
     """
     Selects the minimum Unit Cost index out of deltas dict.
 
     Returns the index of the value of minimum unit cost
     on max delta row/col.
     """
+    
     import numpy as np
 
-    max_delta = max(ddiffs.values())
+    max_delta: int = max(ddiffs.values())
     # get the index of row/col of max_delta
     max_ind: list[int] = [k for k, v in ddiffs.items() if v == max_delta]
     print(f"max_delta {max_delta}")
@@ -193,6 +195,28 @@ c_cp = c_array.copy()
 print(f"Check returned {get_ucmin(dctCHK, c_cp.T)}")
 """
 
+
+def detect_false_delta(delta_ind: int, uc_array: np.array) -> tuple:
+    """
+    Detects wheter a row/col has only one true unit cost (uc).
+
+    Returns the position and value of the only true unit cost
+    (if it's the case) as a tuple (i, j, val) or (-2, -2, -2) if there are
+    more or less than one true unit costs on row/col.
+    """
+    
+    # 1. Extract a list with negative unit cost
+    neg_uc: list[int] = [uc for uc in uc_array if uc == -1]
+    print(f"neg_uc: {neg_uc}")
+    
+    # 2. Compare lenghts of passed array and extracted list
+    uc_list: list[int] = list(uc_array)
+    uc_ind: int = uc_list.index(max(uc_list))
+    if (len(uc_array) - len(neg_uc)) == 1:  # precisely one true uc
+        return (delta_ind, uc_ind, max(uc_list))
+    else:
+        return (-2, -2, -2)
+    
 
 def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
@@ -248,106 +272,98 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
         # 3. Handle Ties and Allocation.The differentiation is either on
         #    equal max deltas or equal min unit costs
         # 3.a. Get the indexes of min unit cost on max_delta rows/cols
-        #      by calling get_uc_min function
-        i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
+        #      by calling get_uc_min or detect_false_delta func
+        uc_r0: int = np.max(c_cp) + 1  # set the uc_r initial value
+        is_fake_delta_r: bool = -1 in list(ddiffs_r.values())
+        print(f"is_fake_delta_r: {is_fake_delta_r}")
+        if is_fake_delta_r:
+            for k,v in ddiffs_r.items():
+                if v == -1:  # suspect row here ...
+                    i_r, j_r, uc_r = detect_false_delta(k, c_cp[k])
+                    if uc_r <= uc_r0:
+                        uc_r0 = uc_r
+                        i = i_r
+                        j = j_r
+              
+                        print(f"i_(-1r): {i}")
+                        print(f"j_(-1r): {j}")
+
+        if not is_fake_delta_r:  # no suspect delta row encountered
+            i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
         print(f"i_r {i_r}")
         print(f"j_r {j_r}")
         print(f"uc_min_r {uc_min_r}")
+        
+        uc_c0: int = np.max(c_cp) + 1  # set the uc_c initial value
+        is_fake_delta_c: bool = -1 in list(ddiffs_c.values())
+        print(f"is_fake_delta_c: {is_fake_delta_c}")
+        if is_fake_delta_c:
+            for k,v in ddiffs_c.items():
+                if v == -1:  # suspect col here ...
+                    i_c, j_c, uc_c = detect_false_delta(k, c_cp.T[k])
+                    if uc_c <= uc_c0:
+                        uc_c0 = uc_c
+                        j = i_r
+                        i = j_r
+              
+                        print(f"i_(-1c): {i}")
+                        print(f"j_(-1c): {j}")
 
-        j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
+        if not is_fake_delta_c:  # no suspect delta col encountered
+            j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
         print(f"i_c {i_c}")
         print(f"j_c {j_c}")
         print(f"uc_min_c {uc_min_c}")
         
-        # 3.b. Select where to allocate based on deltas
+        # 3.b. Select where to allocate based on deltas and min unit cost
         max_delta_row: int = max(ddiffs_r.values())
         max_delta_col: int = max(ddiffs_c.values())
 
-        # delta_row greater than delta_col
-        if max_delta_row > max_delta_col:
-            i: int = i_r
-            j: int = j_r
-            # allocate i if only one uc available on row        
-            if
-        
+        if not is_fake_delta_r and not is_fake_delta_c:
+            # delta on rows is greater than the one on cols 
+            if max_delta_row > max_delta_col:
+                i: int = i_r
+                j: int = j_r
+            # delta on cols is greater than the one on rows
+            if max_delta_col > max_delta_row:
+                i = i_c
+                j = j_c
+            # deltas are equal
+            if max_delta_row == max_delta_col:
+                if uc_min_c >= uc_min_r:
+                    i = i_r
+                    j = j_r
+                else:
+                    i = i_c
+                    j = j_c
+
+        print(f"i: {i}")
+        print(f"j: {j}")
+           
         allocated_in_cycle = False    #safety for while loop ...
        
-        # 4. Search for preferred allocs.         
-        # 4..a. Select the max delta
-               
-        # update Supply/Demand after allocation
+        # 4. Allocate 
+        # 4.a. Get the alloc quantity
+        allocation_quantity = min(s_cp[i], d_cp[j])
+        allocation_matrix[i, j] = allocation_quantity
+        # Update remaining supply and demand
         s_cp[i] -= allocation_quantity
         d_cp[j] -= allocation_quantity
+            
+        # --- Block Satisfied Rows/Columns (Setting cost to a high value) ---
+            
+        # If the supply source 'i' is exhausted, block the entire row
+        if s_cp[i] == 0:
+            c_cp[i, :] = BLOCK_COST
+            
+        # If the demand destination 'j_pref' is satisfied, block the entire column
+        if d_cp[j] == 0:
+            c_cp[:, j] = BLOCK_COST
+            
+        allocated_in_cycle = True
 
+        continue # resume while loop      
         
-        # 4.a. If only one unit cost is positive on row/col
-
-        
-
-
-
-        # 4. Allocate to preferred position, if possible
-        if is_preferred == True:
-            allocation_quantity = d_cp[j_pref]
-            allocation_matrix[i_pref, j_pref] = allocation_quantity
-            # Update remaining supply and demand
-            s_cp[i_pref] -= allocation_quantity
-            d_cp[j_pref] -= allocation_quantity
-            
-            # --- Block Satisfied Rows/Columns (Setting cost to a high value) ---
-            
-            # If the supply source 'i_pref' is exhausted, block the entire row
-            if s_cp[i_pref] == 0:
-                c_cp[i_pref, :] = BLOCK_COST
-            
-            # If the demand destination 'j_pref' is satisfied, block the entire column
-            if d_cp[j_pref] == 0:
-                c_cp[:, j_pref] = BLOCK_COST
-            
-            allocated_in_cycle = True
-
-            continue # resume while loop
-        
-        
-        # 5. Allocate normaly ...
-        for i, j in min_indices:
-            # i = source row index (supply)
-            # j = destination column index (demand)
-            
-            
-            # Determine the maximum possible allocation (min of remaining supply and demand)
-            allocation_quantity = min(s_cp[i], d_cp[j])
-            
-            # Skip if this cell has zero remaining supply/demand (shouldn't happen 
-            # often if blocking works, but provides a guard)
-            if allocation_quantity == 0:
-                continue
-
-            # --- Make the Allocation ---
-            
-            # Store the allocation quantity in the result matrix
-            allocation_matrix[i, j] = allocation_quantity
-            
-            # Update remaining supply and demand
-            s_cp[i] -= allocation_quantity
-            d_cp[j] -= allocation_quantity
-            
-            # --- Block Satisfied Rows/Columns (Setting cost to a high value) ---
-            
-            # If the supply source 'i' is exhausted, block the entire row
-            if s_cp[i] == 0:
-                c_cp[i, :] = BLOCK_COST
-            
-            # If the demand destination 'j' is satisfied, block the entire column
-            if d_cp[j] == 0:
-                c_cp[:, j] = BLOCK_COST
-                
-            allocated_in_cycle = True
-            break # Essential: Restart the while loop to find the NEW minimum cost
-                  # (it might be in a different row/col now)
-        
-        # This check should ideally not be needed if the blocking logic is perfect, 
-        # but acts as a safety against infinite loops in unusual edge cases.
         if not allocated_in_cycle and np.sum(s_cp) > 0:
              # If we couldn't allocate anything despite remaining supply/demand, 
              # something is fundamentally wrong (e.g., all remaining costs were blocked).
