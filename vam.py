@@ -144,11 +144,11 @@ def select_diff(uc_array: np.ndarray) -> int:
     uc_cp = uc_array.copy()
 
     #2. Extract the difference between two of the Least Unit Costs
-    diffs = [l_uc for l_uc in np.sort(uc_cp) if l_uc > 0]
+    diffs = [l_uc for l_uc in np.sort(uc_cp) if l_uc > -1]
     if len(diffs) > 1: #there are at least two Positive Least Unit Costs
         diff = diffs[1] - diffs[0]
     else: # only one Positive Unit Cost
-        diff = -1
+        diff = -2
 
     return diff
 
@@ -268,6 +268,7 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             i: int = i_r
             j: int = j_r
             # allocate i if only one uc available on row        
+            if
         
         allocated_in_cycle = False    #safety for while loop ...
        
