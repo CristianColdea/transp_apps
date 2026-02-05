@@ -181,7 +181,7 @@ def alloc_pref(s_array: np.ndarray, d_array: np.ndarray,
     # 5. Raises error if least unit cost indices not a Tie
     if min_indices.shape[0] < 2:
         raise ValueError("Min_indices of least unit costs doesn't yield a Tie."
-                f"There are vaues: {min_indices.shape[0]}")
+                f"There are values: {min_indices.shape[0]}")
 
     try:
         alloc_pref(s_array, d_array, c_array, min_indices)
