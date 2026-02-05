@@ -123,7 +123,7 @@ c_array = np.array(c_lst)
 s_array = np.array(s_lst)
 d_array = np.array(d_lst)
 
-# The rest of the script (allocLUC, etc.) follows here...
+# The rest of the script (alloc_luc, etc.) follows here...
 
 """
 If the search operation for the least unit cost yields a Tie, there is a 
@@ -134,7 +134,7 @@ preferred allocation according to the following two criteria (in this order):
 For this purpose a specialized function is to be coded.
 """
 
-def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
+def alloc_pref(s_array: np.ndarray, d_array: np.ndarray,
               c_array: np.ndarray, min_indices: np.ndarray) -> Tuple:
     """
     Determines the preferred allocation if there is Least Unit Cost Tie.
@@ -184,14 +184,14 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
                 f"There are vaues: {min_indices.shape[0]}")
 
     try:
-        allocPREF(s_array, d_array, c_array, min_indices)
+        alloc_pref(s_array, d_array, c_array, min_indices)
 
     except ValueError as e:
         print(f"\n🛑 Validation Error: {e}")
         exit(1)
 
 
-def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
+def alloc_luc(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
     """
     Determines a Basic Feasible Solution (BFS) using the Least Unit Cost Method.
@@ -225,9 +225,9 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
         allocated_in_cycle = False    #safety for while loop ...
                                
         # 3. Allocate to preferred position, if this is the case
-        #    by calling allocPREF() function
+        #    by calling alloc_pref() function
         if min_indices.shape[0] != 1:
-            (i_pref, j_pref) = allocPREF(s_array, d_array, c_array, min_indices)
+            (i_pref, j_pref) = alloc_pref(s_array, d_array, c_array, min_indices)
             allocation_quantity = min(s_cp[i_pref], d_cp[j_pref])
             allocation_matrix[i_pref, j_pref] = allocation_quantity
             # Update remaining supply and demand
@@ -303,7 +303,7 @@ def allocLUC(s_array: np.ndarray, d_array: np.ndarray,
 
 
 # The core function call is simplified
-zrs_alloc_array = allocLUC(s_array, d_array, c_array)
+zrs_alloc_array = alloc_luc(s_array, d_array, c_array)
 
 print("\n### Allocation Results ###")
 print("Alloc matrix (Decision Variables) with LUCM:") 
