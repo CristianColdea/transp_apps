@@ -234,12 +234,12 @@ def get_ucmin(ddiffs: dict, c_cp: np.ndarray) -> Tuple:
     
     print(f"store_ind {store_ind}")
     print(f"store_ucmin {store_ucmin}")
-    ind_minUC = store_ucmin.index(min(store_ucmin))
-    print(f"ind_minUC {ind_minUC}")
+    ind_minuc = store_ucmin.index(min(store_ucmin))
+    print(f"ind_minuc {ind_minuc}")
         
-    return (store_ind[ind_minUC],
-            list(c_cp[store_ind[ind_minUC]]).index(min(c_cp[store_ind[ind_minUC]])),
-            store_ucmin[ind_minUC])
+    return (store_ind[ind_minuc],
+            list(c_cp[store_ind[ind_minuc]]).index(min(c_cp[store_ind[ind_minuc]])),
+            store_ucmin[ind_minuc])
 
 """
 dctCHK = {0:1, 1:3, 2:0, 3:3}
