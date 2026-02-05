@@ -131,7 +131,7 @@ d_array = np.array(d_lst)
 # zrs_array = np.zeros_like(c_array, dtype=int) 
 
 
-def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
+def alloc_pref(s_array: np.ndarray, d_array: np.ndarray,
                   c_array: np.ndarray, min_indices: np.ndarray) -> Tuple:
     """
     Determines the preferred allocation if there are least unit cost Tie.
@@ -185,13 +185,13 @@ def allocPREF(s_array: np.ndarray, d_array: np.ndarray,
                 f"There are vaues: {min_indices.shape[0]}")
 
     try:
-        allocPREF(s_array, d_array, c_array, min_indices)
+        alloc_pref(s_array, d_array, c_array, min_indices)
 
     except ValueError as e:
         print(f"\n🛑 Validation Error: {e}")
         exit(1)
 
-def selectDIFF(uc_array: np.ndarray) -> int:
+def select_diff(uc_array: np.ndarray) -> int:
     """
     Analyzes the Unit Cost array (i.e., row or column) passed as arg.
 
@@ -210,45 +210,45 @@ def selectDIFF(uc_array: np.ndarray) -> int:
 
     return diff
 
-def getUCMIN(ddiffs: dict, c_cp: np.ndarray) -> Tuple:
+def get_ucmin(ddiffs: dict, c_cp: np.ndarray) -> Tuple:
     """
-    Selects the minimum Unit Cost (minUC)index out of deltas dict.
+    Selects the minimum Unit Cost index out of deltas dict.
 
-    Returns the index of the value of minimum unit cost - minUC
+    Returns the index of the value of minimum unit cost
     on max delta row/col.
     """
     import numpy as np
 
-    maxDELTA = max(ddiffs.values())
-    maxIND = [k for k, v in ddiffs.items() if v == maxDELTA]
-    print(f"maxDELTA {maxDELTA}")
-    print(f"maxIND {maxIND}")
+    max_delta = max(ddiffs.values())
+    max_ind = [k for k, v in ddiffs.items() if v == max_delta]
+    print(f"max_delta {max_delta}")
+    print(f"max_ind {max_ind}")
     
-    storeIND = []
-    storeUCMIN = []
-    for ind in maxIND:
+    store_ind = []
+    store_ucmin = []
+    for ind in max_ind:
         w_lst = [i for i in c_cp[ind] if i > -1]
         print(f"w_lst {w_lst}")
-        storeIND.append(ind)
-        storeUCMIN.append(min(w_lst))
+        store_ind.append(ind)
+        store_ucmin.append(min(w_lst))
     
-    print(f"storeIND {storeIND}")
-    print(f"storeUCMIN {storeUCMIN}")
-    ind_minUC = storeUCMIN.index(min(storeUCMIN))
+    print(f"store_ind {store_ind}")
+    print(f"store_ucmin {store_ucmin}")
+    ind_minUC = store_ucmin.index(min(store_ucmin))
     print(f"ind_minUC {ind_minUC}")
         
-    return (storeIND[ind_minUC],
-            list(c_cp[storeIND[ind_minUC]]).index(min(c_cp[storeIND[ind_minUC]])),
-            storeUCMIN[ind_minUC])
+    return (store_ind[ind_minUC],
+            list(c_cp[store_ind[ind_minUC]]).index(min(c_cp[store_ind[ind_minUC]])),
+            store_ucmin[ind_minUC])
 
 """
 dctCHK = {0:1, 1:3, 2:0, 3:3}
 c_cp = c_array.copy()
 
-print(f"Check returned {getUCMIN(dctCHK, c_cp.T)}")
+print(f"Check returned {get_ucmin(dctCHK, c_cp.T)}")
 """
 
-def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
+def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
     """
     Determines a Basic Feasible Solution (BFS) using the Vogel Alloc Method.
@@ -283,33 +283,33 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
         #    pair of indices (i, j) (the dict keys) where the Least Cost Unit
         #    is located, on rows and cols.
 
-        ddiffsR = {}    #dict to store {r: diff} on rows
+        ddiffs_r = {}    #dict to store {r: diff} on rows
         for r in range(len(c_cp)):    #iterate over rows of UCM
             #print("row, ", c_cp[r])
-            diff = selectDIFF(c_cp[r])
+            diff = select_diff(c_cp[r])
             #print("diffR, ", diff)
-            ddiffsR[r] = diff
-        print("Diffs dict after rows, ", ddiffsR)
+            ddiffs_r[r] = diff
+        print("Diffs dict after rows, ", ddiffs_r)
 
-        ddiffsC = {}    #dict to store {c: diff} on cols
+        ddiffs_c = {}    #dict to store {c: diff} on cols
         for c in range(len(c_cp.T)):    #iterate over columns of UCM
             #print("col, ", c_cp.T[c])
-            diff = selectDIFF(c_cp.T[c])
+            diff = select_diff(c_cp.T[c])
             #print("diffC, ", diff)
-            ddiffsC[c] = diff
-        print("Diffs dict after cols, ", ddiffsC)
+            ddiffs_c[c] = diff
+        print("Diffs dict after cols, ", ddiffs_c)
  
         # 3. Handle Ties and Allocation.The differentiation is either on
         #    equal max deltas or equal min unit costs
-        ir,jr, ucminr = getUCMIN(ddiffsR, c_cp)
-        print(f"ir {ir}")
-        print(f"jr {jr}")
-        print(f"ucminr {ucminr}")
+        i_r,j_r, ucmin_r = get_ucmin(ddiffs_r, c_cp)
+        print(f"i_r {i_r}")
+        print(f"j_r {j_r}")
+        print(f"ucmin_r {ucmin_r}")
 
-        jc, ic, ucminc = getUCMIN(ddiffsC, c_cp.T)
-        print(f"ic {ic}")
-        print(f"jc {jc}")
-        print(f"ucminc {ucminc}")
+        j_c, i_c, ucmin_c = get_ucmin(ddiffs_c, c_cp.T)
+        print(f"i_c {i_c}")
+        print(f"j_c {j_c}")
+        print(f"ucmin_c {ucmin_c}")
 
         
         
@@ -401,7 +401,7 @@ def allocVAM(s_array: np.ndarray, d_array: np.ndarray,
     return allocation_matrix
 
 # Allocation function call
-zrs_alloc_array = allocVAM(s_array, d_array, c_array)
+zrs_alloc_array = alloc_vam(s_array, d_array, c_array)
 
 print("\n### Allocation Results ###")
 print("Alloc matrix (Decision Variables) with NWCM:") 
