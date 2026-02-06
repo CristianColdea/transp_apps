@@ -296,8 +296,12 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
                         print(f"i_(-1r): {i}")
                         print(f"j_(-1r): {j}")
 
+        if is_fake_delta_r and i_r == -2:  # no tricky delta
+            i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
+
         if not is_fake_delta_r:  # no suspect delta row encountered
             i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
+        
         print(f"i_r {i_r}")
         print(f"j_r {j_r}")
         print(f"uc_min_r: {uc_min_r}")
@@ -306,6 +310,8 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
         print(f"uc_c0: {uc_c0}")
         is_fake_delta_c: bool = -1 in list(ddiffs_c.values())
         print(f"is_fake_delta_c: {is_fake_delta_c}")
+        # to code is check if all uc are equal to -1.
+        # if YES => break the main loop
         if is_fake_delta_c:
             for k,v in ddiffs_c.items():
                 if v == -1:  # suspect col here ...
@@ -318,8 +324,12 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
                         print(f"i_(-1c): {i}")
                         print(f"j_(-1c): {j}")
 
+        if is_fake_delta_c and i_c == -2:  # no tricky delta
+            j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
+
         if not is_fake_delta_c:  # no suspect delta col encountered
             j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
+        
         print(f"i_c {i_c}")
         print(f"j_c {j_c}")
         print(f"uc_min_c: {uc_min_c}")
@@ -328,23 +338,24 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
         max_delta_row: int = max(ddiffs_r.values())
         max_delta_col: int = max(ddiffs_c.values())
 
-        if not is_fake_delta_r and not is_fake_delta_c:
-            # delta on rows is greater than the one on cols 
-            if max_delta_row > max_delta_col:
-                i: int = i_r
-                j: int = j_r
-            # delta on cols is greater than the one on rows
-            if max_delta_col > max_delta_row:
+        # if ((not is_fake_delta_r or i_r == -2) and
+        #     (not is_fake_delta_c or i_c) == -2):
+        #     # delta on rows is greater than the one on cols 
+        if max_delta_row > max_delta_col:
+            i: int = i_r
+            j: int = j_r
+        # delta on cols is greater than the one on rows
+        if max_delta_col > max_delta_row:
+            i = i_c
+            j = j_c
+        # deltas are equal
+        if max_delta_row == max_delta_col:
+            if uc_min_c >= uc_min_r:
+                i = i_r
+                j = j_r
+            else:
                 i = i_c
                 j = j_c
-            # deltas are equal
-            if max_delta_row == max_delta_col:
-                if uc_min_c >= uc_min_r:
-                    i = i_r
-                    j = j_r
-                else:
-                    i = i_c
-                    j = j_c
 
         print(f"i: {i}")
         print(f"j: {j}")
@@ -355,6 +366,7 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
         # 4.a. Get the alloc quantity
         allocation_quantity = min(s_cp[i], d_cp[j])
         allocation_matrix[i, j] = allocation_quantity
+        print(f"alloc_quantity: {allocation_quantity}")
         # Update remaining supply and demand
         s_cp[i] -= allocation_quantity
         d_cp[j] -= allocation_quantity
@@ -370,13 +382,16 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             c_cp[:, j] = BLOCK_COST
             
         allocated_in_cycle = True
+
+        print(f"alloc_matrix: {allocation_matrix}")
+        print('\n')
         
         t += 1
         print(f"t: {t}")
-        if t == 4:
+        if t == 6:
             break
 
-        continue # resume while loop      
+        continue # resume while loop     
         
         if not allocated_in_cycle and np.sum(s_cp) > 0:
              # If we couldn't allocate anything despite remaining supply/demand, 
