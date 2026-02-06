@@ -167,6 +167,7 @@ def get_uc_min(ddiffs: dict, c_cp: np.ndarray) -> tuple:
     max_delta: int = max(ddiffs.values())
     # get the index of row/col of max_delta
     max_ind: list[int] = [k for k, v in ddiffs.items() if v == max_delta]
+    print('\n')
     print(f"max_delta {max_delta}")
     print(f"max_ind {max_ind}")
     
@@ -181,12 +182,17 @@ def get_uc_min(ddiffs: dict, c_cp: np.ndarray) -> tuple:
     
     print(f"store_ind {store_ind}")
     print(f"store_uc_min {store_uc_min}")
+    # Needs attention here!!!
     ind_uc_min: int = store_uc_min.index(min(store_uc_min))
     print(f"ind_uc_min {ind_uc_min}")
+    print(f"c_cp[store_ind[ind_uc_min]]: {c_cp[store_ind[ind_uc_min]]}")
+    #print(f"c_cp[store_ind[ind_uc_min]]: {type(c_cp[store_ind[ind_uc_min]])}")
+    true_uc: list[int] = [x for x in list(c_cp[store_ind[ind_uc_min]]) if x > 0]
+    j: int = list(c_cp[store_ind[ind_uc_min]]).index(min(true_uc))
+    print(f"j: {j}")
+    print('\n')
         
-    return (store_ind[ind_uc_min],
-            list(c_cp[store_ind[ind_uc_min]]).index(min(c_cp[store_ind[ind_uc_min]])),
-            store_uc_min[ind_uc_min])
+    return (store_ind[ind_uc_min], j, store_uc_min[ind_uc_min])
 
 """
 dctCHK = {0:1, 1:3, 2:0, 3:3}
@@ -217,7 +223,6 @@ def detect_false_delta(delta_ind: int, uc_array: np.array) -> tuple:
     else:
         return (-2, -2, -2)
     
-
 def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             c_array: np.ndarray) -> np.ndarray:
     """
@@ -241,6 +246,9 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
     
     # Core loop continues until all supply is exhausted (which means demand is also zero,
     # due to the balancing assertion)
+    
+    t = 0  # set a counter for main loop
+
     while np.sum(s_cp) > 0:
         
         # 2. Call the speciliazed function to extract the difference between
@@ -252,7 +260,7 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
         #    deltas (i.e., on rows and cols), being possible to have the same
         #    pair of indices (i, j) (the dict keys) where the Least Cost Unit
         #    is located, on rows and cols.
-
+ 
         ddiffs_r = {}    #dict to store {r: diff} on rows
         for r in range(len(c_cp)):    #iterate over rows of UCM
             #print("row, ", c_cp[r])
@@ -292,9 +300,10 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
         print(f"i_r {i_r}")
         print(f"j_r {j_r}")
-        print(f"uc_min_r {uc_min_r}")
+        print(f"uc_min_r: {uc_min_r}")
         
         uc_c0: int = np.max(c_cp) + 1  # set the uc_c initial value
+        print(f"uc_c0: {uc_c0}")
         is_fake_delta_c: bool = -1 in list(ddiffs_c.values())
         print(f"is_fake_delta_c: {is_fake_delta_c}")
         if is_fake_delta_c:
@@ -303,8 +312,8 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
                     i_c, j_c, uc_c = detect_false_delta(k, c_cp.T[k])
                     if uc_c <= uc_c0:
                         uc_c0 = uc_c
-                        j = i_r
-                        i = j_r
+                        j = i_c
+                        i = j_c
               
                         print(f"i_(-1c): {i}")
                         print(f"j_(-1c): {j}")
@@ -313,7 +322,7 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
         print(f"i_c {i_c}")
         print(f"j_c {j_c}")
-        print(f"uc_min_c {uc_min_c}")
+        print(f"uc_min_c: {uc_min_c}")
         
         # 3.b. Select where to allocate based on deltas and min unit cost
         max_delta_row: int = max(ddiffs_r.values())
@@ -361,6 +370,11 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             c_cp[:, j] = BLOCK_COST
             
         allocated_in_cycle = True
+        
+        t += 1
+        print(f"t: {t}")
+        if t == 4:
+            break
 
         continue # resume while loop      
         
