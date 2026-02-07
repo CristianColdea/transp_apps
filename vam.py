@@ -202,7 +202,7 @@ def get_uc_min(ddiffs: dict, c_cp: np.ndarray) -> tuple:
     return (store_ind[ind_uc_min], j, store_uc_min[ind_uc_min])
 
 
-def detect_false_delta(delta_ind: int, uc_array: np.array) -> tuple:
+def detect_false_delta(delta_ind: int, uc_array: np.ndarray) -> tuple:
     """
     Detects wheter a row/col has only one true unit cost (uc).
 
@@ -300,8 +300,8 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
                         i_r, j_r, uc_r = detect_false_delta(k, c_cp[k])
                         if uc_r <= uc_r0:
                             uc_r0 = uc_r
-                            i = i_r
-                            j = j_r
+                            i:int = i_r
+                            j:int = j_r
               
                             # print(f"i_(-1r): {i}")
                             # print(f"j_(-1r): {j}")
@@ -361,8 +361,8 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
         #     (not is_fake_delta_c or i_c) == -2):
         #     # delta on rows is greater than the one on cols 
         if max_delta_row > max_delta_col:
-            i: int = i_r
-            j: int = j_r
+            i = i_r
+            j = j_r
         # delta on cols is greater than the one on rows
         if max_delta_col > max_delta_row:
             i = i_c
