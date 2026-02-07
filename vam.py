@@ -5,6 +5,10 @@ supply must match the number of cost matrix rows and that of demand the
 columns, respectively.
 Returns the allocation table, whether the feasible solution is possible, i.e.,
 bool, and the allocation total cost.
+In case of equal deltas or rows/cols the tie is broken on minimum unit cost
+associated on rows/cols. If the minimum unit costs are equal this second tie
+is broken by choosing the greatest amount possible to allocate. Otherwise the
+allocation goes on min unit cost got by rows analysis.
 """
 
 import numpy as np
@@ -365,12 +369,21 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             j = j_c
         # deltas are equal
         if max_delta_row == max_delta_col:
-            if uc_min_c >= uc_min_r:
+            if uc_min_c > uc_min_r:
                 i = i_r
                 j = j_r
-            else:
+            if uc_min_r > uc_min_c:
                 i = i_c
                 j = j_c
+            if uc_min_r == uc_min_c:
+                # if at equal ucs quantity on rows is >= cols
+                if (np.min(s_cp[i_r], d_cp[j_r]) >= np.min(s_cp[i_c],
+                                                           d_cp[j_c])):
+                    i = i_r
+                    j = j_r
+                else:  # greater on cols
+                    i = i_c
+                    j - j_c
 
         print(f"i: {i}")
         print(f"j: {j}")
