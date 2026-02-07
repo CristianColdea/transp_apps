@@ -182,7 +182,6 @@ def get_uc_min(ddiffs: dict, c_cp: np.ndarray) -> tuple:
     
     print(f"store_ind {store_ind}")
     print(f"store_uc_min {store_uc_min}")
-    # Needs attention here!!!
     ind_uc_min: int = store_uc_min.index(min(store_uc_min))
     print(f"ind_uc_min {ind_uc_min}")
     print(f"c_cp[store_ind[ind_uc_min]]: {c_cp[store_ind[ind_uc_min]]}")
@@ -284,6 +283,15 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
         uc_r0: int = np.max(c_cp) + 1  # set the uc_r initial value
         is_fake_delta_r: bool = -1 in list(ddiffs_r.values())
         print(f"is_fake_delta_r: {is_fake_delta_r}")
+        
+        # check if all deltas_r are negative
+        is_delta_r_neg = True
+        for delta in ddiffs_r.values():
+            if delta > -1:
+                is_delta_r_neg = False
+
+        print(f"is_delta_r_neg: {is_delta_r_neg}")
+
         if is_fake_delta_r:
             for k,v in ddiffs_r.items():
                 if v == -1:  # suspect row here ...
@@ -301,35 +309,44 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
 
         if not is_fake_delta_r:  # no suspect delta row encountered
             i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
-        
+
         print(f"i_r {i_r}")
         print(f"j_r {j_r}")
         print(f"uc_min_r: {uc_min_r}")
         
+        # check if all deltas_c are negative
+        is_delta_c_neg = True
+        for delta in ddiffs_c.values():
+            if delta > -1:
+                is_delta_c_neg = False
+
+        print(f"is_delta_c_neg: {is_delta_c_neg}")
+
         uc_c0: int = np.max(c_cp) + 1  # set the uc_c initial value
         print(f"uc_c0: {uc_c0}")
         is_fake_delta_c: bool = -1 in list(ddiffs_c.values())
         print(f"is_fake_delta_c: {is_fake_delta_c}")
-        # to code is check if all uc are equal to -1.
-        # if YES => break the main loop
-        if is_fake_delta_c:
-            for k,v in ddiffs_c.items():
-                if v == -1:  # suspect col here ...
-                    i_c, j_c, uc_c = detect_false_delta(k, c_cp.T[k])
-                    if uc_c <= uc_c0:
-                        uc_c0 = uc_c
-                        j = i_c
-                        i = j_c
-              
-                        print(f"i_(-1c): {i}")
-                        print(f"j_(-1c): {j}")
 
-        if is_fake_delta_c and i_c == -2:  # no tricky delta
-            j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
-
-        if not is_fake_delta_c:  # no suspect delta col encountered
-            j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
         
+        if is_delta_c_neg == False:
+            if is_fake_delta_c:
+                for k,v in ddiffs_c.items():
+                    if v == -1:  # suspect col here ...
+                        i_c, j_c, uc_c = detect_false_delta(k, c_cp.T[k])
+                        if uc_c <= uc_c0:
+                            uc_c0 = uc_c
+                            j = i_c
+                            i = j_c
+              
+                            print(f"i_(-1c): {i}")
+                            print(f"j_(-1c): {j}")
+
+            if is_fake_delta_c and i_c == -2:  # no tricky delta
+                j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
+
+            if not is_fake_delta_c:  # no suspect delta col encountered
+                j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
+                
         print(f"i_c {i_c}")
         print(f"j_c {j_c}")
         print(f"uc_min_c: {uc_min_c}")
@@ -383,12 +400,16 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             
         allocated_in_cycle = True
 
-        print(f"alloc_matrix: {allocation_matrix}")
-        print('\n')
-        
+        # print(f"alloc_matrix: {allocation_matrix}")
+                
         t += 1
-        print(f"t: {t}")
-        if t == 6:
+        print(f"iteration is: {t}")
+        print('\n')
+
+        #if t == 8:
+        #    break
+        
+        if is_delta_r_neg == True and is_delta_c_neg == True:
             break
 
         continue # resume while loop     
