@@ -90,10 +90,11 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
 
 # --- Execution Start ---
 
-#c_lst, s_lst, d_lst = get_user_input()
-c_lst = [[7, 6, 4, 3], [9, 5, 2, 6], [4, 8, 5, 3]]
-s_lst = [20, 30, 50]
-d_lst = [15, 37, 23, 25]
+# c_lst, s_lst, d_lst = get_user_input()
+c_lst = [[1054, 1840, 2867, 4271], [1824, 2705, 3604, 4857], [1494, 2484, 2788,
+                                                              4514]]
+s_lst = [44, 36, 105]
+d_lst = [52, 46, 48, 39]
 
 sum_s = sum(s_lst)
 sum_d = sum(d_lst)
@@ -292,23 +293,24 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
 
         print(f"is_delta_r_neg: {is_delta_r_neg}")
 
-        if is_fake_delta_r:
-            for k,v in ddiffs_r.items():
-                if v == -1:  # suspect row here ...
-                    i_r, j_r, uc_r = detect_false_delta(k, c_cp[k])
-                    if uc_r <= uc_r0:
-                        uc_r0 = uc_r
-                        i = i_r
-                        j = j_r
+        if is_delta_r_neg == False:
+            if is_fake_delta_r:
+                for k,v in ddiffs_r.items():
+                    if v == -1:  # suspect row here ...
+                        i_r, j_r, uc_r = detect_false_delta(k, c_cp[k])
+                        if uc_r <= uc_r0:
+                            uc_r0 = uc_r
+                            i = i_r
+                            j = j_r
               
-                        print(f"i_(-1r): {i}")
-                        print(f"j_(-1r): {j}")
+                            print(f"i_(-1r): {i}")
+                            print(f"j_(-1r): {j}")
 
-        if is_fake_delta_r and i_r == -2:  # no tricky delta
-            i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
+            if is_fake_delta_r and i_r == -2:  # no tricky delta
+                i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
 
-        if not is_fake_delta_r:  # no suspect delta row encountered
-            i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
+            if not is_fake_delta_r:  # no suspect delta row encountered
+                i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
 
         print(f"i_r {i_r}")
         print(f"j_r {j_r}")
@@ -400,7 +402,9 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
             
         allocated_in_cycle = True
 
-        # print(f"alloc_matrix: {allocation_matrix}")
+        print(f"alloc_matrix: {allocation_matrix}")
+
+        print(f"c_cp: {c_cp}")
                 
         t += 1
         print(f"iteration is: {t}")
