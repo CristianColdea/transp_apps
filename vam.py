@@ -422,7 +422,7 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
         #if t == 8:
         #    break
         
-        if is_uc_r_neg == True and is_uc_c_neg == True:
+        if is_uc_r_neg and is_uc_c_neg:
             break
 
         continue # resume while loop     
