@@ -188,10 +188,11 @@ def get_uc_min(ddiffs: dict, c_cp: np.ndarray) -> tuple:
     ind_uc_min: int = store_uc_min.index(min(store_uc_min))
     # print(f"ind_uc_min {ind_uc_min}")
     # print(f"c_cp[store_ind[ind_uc_min]]: {c_cp[store_ind[ind_uc_min]]}")
-    #print(f"c_cp[store_ind[ind_uc_min]]: {type(c_cp[store_ind[ind_uc_min]])}")
-    true_uc: list[int] = [x for x in list(c_cp[store_ind[ind_uc_min]]) if x > 0]
+    # print(f"c_cp[store_ind[ind_uc_min]]: {type(c_cp[store_ind[ind_uc_min]])}")
+    true_uc: list[int] = [x for x in list(c_cp[store_ind[ind_uc_min]]) if x >
+                          -1]
     j: int = list(c_cp[store_ind[ind_uc_min]]).index(min(true_uc))
-    #print(f"j: {j}")
+    # print(f"j: {j}")
     # print('\n')
         
     return (store_ind[ind_uc_min], j, store_uc_min[ind_uc_min])
@@ -507,7 +508,7 @@ try:
     is_feasible, total_cost = feasibility_cost(zrs_alloc_array, c_array)
 
     print("Basic solution is feasible:", is_feasible)
-    print(f"North West Corner Method total allocation cost: {total_cost:,}")
+    print(f"Vogel Allocation Method total allocation cost: {total_cost:,}")
 
 except ValueError as e:
     # Gracefully handle the degeneracy error raised by the function
