@@ -5,7 +5,7 @@ supply must match the number of cost matrix rows and that of demand the
 columns, respectively.
 Returns the allocation table, whether the feasible solution is possible, i.e.,
 bool, and the allocation total cost.
-In case of equal deltas or rows/cols the tie is broken on minimum unit cost
+In case of equal deltas on rows/cols the tie is broken on minimum unit cost
 associated on rows/cols. If the minimum unit costs are equal this second tie
 is broken by choosing the greatest amount possible to allocate. Otherwise the
 allocation goes on min unit cost got by rows analysis.
