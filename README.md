@@ -44,7 +44,7 @@ List of features ready and TODOs for future development
 * ~~Write README.md file~~
 * ~~Code North-West Corner Method~~
 * ~~Code Least Cost Method~~
-* Code Vogel Method
+* ~~Code Vogel Method~~
 * Code the balancing script
 * Code the Russels allocation
 * Code optimization with non-basic variables
