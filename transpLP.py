@@ -111,16 +111,18 @@ for j in range(len(d_lst)):
 # Solve the problem
 problem.solve()
 
-# print("Dict is, ",x) 
+print(f"Dict: {x}")
 
 opt_flat = []
 for v in problem.variables():
     opt_flat.append(v.varValue)
+    
+print(f"Flatten array: {opt_flat}")
 
 opt_matrix = [opt_flat[i:i+len(d_lst)] for i in range(0, len(opt_flat),
                                                      len(d_lst))]
 
 opt_matrix_array = np.array(opt_matrix)
 
-print("Optimal alloc matrix, ")
+print("Optimal alloc matrix:")
 print(opt_matrix_array)
