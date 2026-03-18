@@ -45,12 +45,11 @@ List of features ready and TODOs for future development
 * ~~Code North-West Corner Method~~
 * ~~Code Least Cost Method~~
 * ~~Code Vogel Method~~
-* Code the balancing script
-* Code the Russels allocation
-* Code optimization with non-basic variables
-* Code optimization with Stepping Stone Method
-* Code Hungarian Method for resources allocation
-* Code Transportation Plan Greedy Optimization
+* ~~Code the balancing script~~ 
+* ~~Code optimization with non-basic variables~~
+* ~~Code optimization with Stepping Stone Method~~
+* ~~Develop transportation solution with MS Excel~~
+* Code Hungarian Method for resources assignment
 * and many more will be updated as the work progresses.
 
 ## Status
