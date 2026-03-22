@@ -82,38 +82,48 @@ costs must be a squared one.
 
 c_lst = get_user_input()
 
-# Create the problem
-problem = LpProblem("Transportation_Problem", LpMinimize)
-
-# Decision variables
-routes = [(i, j) for i in range(len(s_lst)) for j in range(len(d_lst))]
-x = LpVariable.dicts("Route", routes, lowBound=0)
-
-# Objective function
-problem += lpSum(c_lst[i][j] * x[(i, j)] for (i, j) in routes)
-
-# Constraints
-for i in range(len(s_lst)):
-    problem += lpSum(x[(i, j)] for j in range(len(d_lst))) <= s_lst[i]
-
-for j in range(len(d_lst)):
-    problem += lpSum(x[(i, j)] for i in range(len(s_lst))) >= d_lst[j]
-
-# Solve the problem
-problem.solve()
-
-print(f"Dict: {x}")
-
-opt_flat = []
-for v in problem.variables():
-    opt_flat.append(v.varValue)
+def assertions(c: List[List[int]]) -> None:
+    # ... (Your original assertions function)
+    # Using the standard type hint List instead of list for compatibility with python versions < 3.9
     
-print(f"Flatten array: {opt_flat}")
+    """
+    Function to check the dimensional 'sanity', i.e. assignment cost
+    matrix must be a squared one.
+    Signals problems and aborts execution.
+    """
+    if len(c) != len(c[0]):
+        raise ValueError(f"Dimensional error: Cost matrix is not squared.")
 
-opt_matrix = [opt_flat[i:i+len(d_lst)] for i in range(0, len(opt_flat),
-                                                     len(d_lst))]
+try:
+    assertions(c_lst)
+except ValueError as e:
+    print(f"\n🛑 Validation Error: {e}")
+    exit(1)
 
-opt_matrix_array = np.array(opt_matrix)
 
-print("Optimal alloc matrix:")
-print(opt_matrix_array)
+# create a matrix from costs list of lists
+c_array = np.array(c_lst)
+    
+print(f"Input data numpy array: {c_array}")
+
+# 1. Function to reduce cost matrix on rows or columns
+def reduce_matrix(c:np.ndarray) -> np.ndarray:
+    """
+    Function to reduce the costs on row or columns.
+    Takes as input the assignment cost numpy matrix.
+    Returns reduced matrix on rows.
+    """
+    # check if passed arg is a square matrix
+    if c.shape[0] != c.shape[1]:
+        print(f"\n🛑 Matrix Shape Error: {e}")
+        exit(1)
+
+    return (c - np.min(c, axis=1, keepdims=True))
+
+#2. Function to efficiently cross out zeros in reduced costs matrix
+#def cross_out_nulls(c_red:np.ndarray) -> Tuple(bool, int)
+
+#3. Functions call, assignment and total cost
+c_red = reduce_matrix(reduce_matrix(c_array).T).T
+
+print(f"\n Reduced cost matrix: {c_red}")
