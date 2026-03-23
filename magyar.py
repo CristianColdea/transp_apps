@@ -121,9 +121,21 @@ def reduce_matrix(c:np.ndarray) -> np.ndarray:
     return (c - np.min(c, axis=1, keepdims=True))
 
 #2. Function to efficiently cross out zeros in reduced costs matrix
-#def cross_out_nulls(c_red:np.ndarray) -> Tuple(bool, int)
+def cross_out_nulls(c_red:np.ndarray) -> Tuple(bool, int):
+    nulls = []
+    for row in c_red:
+        nulls.append(np.count_nonzero(c_red[i] == 0))
+
+    return nulls
 
 #3. Functions call, assignment and total cost
 c_red = reduce_matrix(reduce_matrix(c_array).T).T
 
 print(f"\n Reduced cost matrix: {c_red}")
+
+nulls_on_rows = cross_out_nulls(c_red)
+nulls_on_cols = cross_out_nulls(c_red.T)
+if (max(nulls_on_rows) >= max(nulls_on_cols):
+    to_cross_out = nulls_on_rows.index(max(nulls_on_rows))
+else:
+    to_cross_out = nulls_on_cols.index(max(nulls_on_cols))
