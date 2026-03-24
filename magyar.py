@@ -104,7 +104,7 @@ except ValueError as e:
 # create a matrix from costs list of lists
 c_array = np.array(c_lst)
     
-print(f"Input data numpy array: {c_array}")
+print(f"Input data numpy array: \n{c_array}")
 
 # 1. Function to reduce cost matrix on rows or columns
 def reduce_matrix(c:np.ndarray) -> np.ndarray:
@@ -121,21 +121,47 @@ def reduce_matrix(c:np.ndarray) -> np.ndarray:
     return (c - np.min(c, axis=1, keepdims=True))
 
 #2. Function to efficiently cross out zeros in reduced costs matrix
-def cross_out_nulls(c_red:np.ndarray) -> Tuple(bool, int):
+def cross_out_nulls(c_red:np.ndarray) -> list[int]:
     nulls = []
     for row in c_red:
-        nulls.append(np.count_nonzero(c_red[i] == 0))
+        nulls.append(np.count_nonzero(row == 0))
 
     return nulls
 
 #3. Functions call, assignment and total cost
 c_red = reduce_matrix(reduce_matrix(c_array).T).T
 
-print(f"\n Reduced cost matrix: {c_red}")
+print(f"\n Reduced cost matrix: \n{c_red}")
 
-nulls_on_rows = cross_out_nulls(c_red)
-nulls_on_cols = cross_out_nulls(c_red.T)
-if (max(nulls_on_rows) >= max(nulls_on_cols):
-    to_cross_out = nulls_on_rows.index(max(nulls_on_rows))
-else:
-    to_cross_out = nulls_on_cols.index(max(nulls_on_cols))
+BLOCK_COST = -1
+# crossed = 0 #start iterating from zero crossed out rows/cols
+not_allocated = True
+
+(1, 3, 4), (1, 2, 5), (3, 2, 6)
+(3, 2, 5), (5, 5, 3), (5, 4, 2)
+
+while (not_allocated):
+    c_work = c_red #get a working copy of reduced costs array
+    crossed = 0
+    
+    # 3.1. Cross out zeros 'efficiently'
+    while(np.count_nonzero(c_red == 0) != 0): #there are still zeros ...
+        nulls_on_rows = cross_out_nulls(c_red)  #check the nulls on rows
+        nulls_on_cols = cross_out_nulls(c_red.T) #check the nulls on cols
+
+        if (max(nulls_on_rows) >= max(nulls_on_cols)): #more nulls on rows ...
+            to_cross_out = nulls_on_rows.index(max(nulls_on_rows))
+            c_work[to_cross_out] = BLOCK_COST #replace crossed outs
+            crossed += 1 #count crossed outs
+        else: #more nulls on cols
+            to_cross_out = nulls_on_cols.index(max(nulls_on_cols))
+            c_work.T[to_cross_out] = BLOCK_COST #replace crossed outs
+            crossed += 1 #count crossed outs
+
+        print(f"\n After: {crossed} cross out: \n{c_red}")
+        print(f"crossed: {crossed}")
+
+    #if crossed == len(c_red): #optimum solution is possible
+        # 3.2. Allocate on zeros in c_red array
+    not_allocated = False    
+
