@@ -104,7 +104,7 @@ except ValueError as e:
 # create a matrix from costs list of lists
 c_array = np.array(c_lst)
     
-print(f"Input data numpy array: \n{c_array}")
+print(f"\nInput data numpy array: \n{c_array}")
 
 # 1. Function to reduce cost matrix on rows or columns
 def reduce_matrix(c:np.ndarray) -> np.ndarray:
@@ -115,7 +115,7 @@ def reduce_matrix(c:np.ndarray) -> np.ndarray:
     """
     # check if passed arg is a square matrix
     if c.shape[0] != c.shape[1]:
-        print(f"\n🛑 Matrix Shape Error: {e}")
+        print(f"\n🛑Matrix Shape Error: {e}")
         exit(1)
 
     return (c - np.min(c, axis=1, keepdims=True))
@@ -128,10 +128,24 @@ def cross_out_nulls(c_red:np.ndarray) -> list[int]:
 
     return nulls
 
+#4. Assignment function of the optimum solution
+def assign_opt(c_nulls:np.ndarray) -> None:
+    # check wether there are enough zeros
+    if np.count_nonzero(c_nulls) < len(c_nulls):
+        print("\n🛑Not enough zeros within the arg array. Exiting func.")
+        exit()
+    return None
+
+#5. Optimization function
+def optimize(c_nulls:np.ndarray) -> None:
+
+    return None
+
+
 #3. Functions call, assignment and total cost
 c_red = reduce_matrix(reduce_matrix(c_array).T).T
 
-print(f"\n Reduced cost matrix: \n{c_red}")
+print(f"\nReduced cost matrix: \n{c_red}")
 
 BLOCK_COST = -1
 # crossed = 0 #start iterating from zero crossed out rows/cols
@@ -159,7 +173,7 @@ while (not_allocated):
             c_work.T[to_cross_out] = BLOCK_COST #replace crossed outs
             crossed += 1 #count crossed outs
 
-        print(f"\n After: {crossed} cross out: \n{c_red}")
+        print(f"\nAfter: {crossed} cross out: \n{c_red}")
         print(f"crossed: {crossed}")
 
     #if crossed == len(c_red): #optimum solution is possible
