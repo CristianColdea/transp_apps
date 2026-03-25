@@ -14,7 +14,7 @@ import numpy as np
 
 # +++++ USER INTERFACE AND INPUT HANDLING SECTION +++++
 
-def get_user_input() -> tuple[List[List[int]]]:
+def get_user_input() -> list[list[int]]:
     """
     Prompts the user for assignment cost matrix.
     Validates and safely converts the string inputs to required Python lists.
@@ -81,8 +81,9 @@ costs must be a squared one.
 # --- Execution Start ---
 
 c_lst = get_user_input()
+# print(f"c_lst: {c_lst}")
 
-def assertions(c: List[List[int]]) -> None:
+def assertions(c: list[list[int]]) -> None:
     # ... (Your original assertions function)
     # Using the standard type hint List instead of list for compatibility with python versions < 3.9
     
@@ -115,37 +116,79 @@ def reduce_matrix(c:np.ndarray) -> np.ndarray:
     """
     # check if passed arg is a square matrix
     if c.shape[0] != c.shape[1]:
-        print(f"\n🛑Matrix Shape Error: {e}")
+        print(f"\n🛑Matrix Shape Error: {c.shape}")
         exit(1)
 
     return (c - np.min(c, axis=1, keepdims=True))
 
 #2. Function to efficiently cross out zeros in reduced costs matrix
 def cross_out_nulls(c_red:np.ndarray) -> list[int]:
+    """
+    Takes as input the reduced costs matrix.
+    Counts the zeros on each row.
+    Returns a list with number of zeros on each row.
+    """
     nulls = []
     for row in c_red:
         nulls.append(np.count_nonzero(row == 0))
 
     return nulls
 
-#4. Assignment function of the optimum solution
-def assign_opt(c_nulls:np.ndarray) -> None:
-    # check wether there are enough zeros
-    if np.count_nonzero(c_nulls) < len(c_nulls):
-        print("\n🛑Not enough zeros within the arg array. Exiting func.")
-        exit()
-    return None
 
-#5. Optimization function
+#3. Finding the correct sequences of zeros (one zero/row-col) 
+def assign_opt(c_red:np.ndarray) -> list[list[tuple]]:
+    """
+    Finds all sequences of zeros in the reduced costs matrix such
+    there is exactly one zero in each row and each column.
+    Returns a list with found sequences.
+    """
+ 
+    n = c_red.shape[0]
+    
+    # Pre-compute the column indices of zeros for each row to speed up lookup
+    zero_positions = [np.where(c_red[r] == 0)[0] for r in range(n)]
+    
+    all_sequences = []
+
+    def backtrack(row, used_cols, current_seq):
+        if row == n:
+            all_sequences.append(list(current_seq))
+            return
+
+        for col in zero_positions[row]:
+            if col not in used_cols:
+                # Explore this branch
+                used_cols.add(col)
+                current_seq.append((row, col))
+                
+                backtrack(row + 1, used_cols, current_seq)
+                
+                # Backtrack
+                current_seq.pop()
+                used_cols.remove(col)
+
+    backtrack(0, set(), [])
+    return all_sequences
+
+#4. Optimization function
 def optimize(c_nulls:np.ndarray) -> None:
 
     return None
 
 
-#3. Functions call, assignment and total cost
+#5. Functions call, assignment and total cost
 c_red = reduce_matrix(reduce_matrix(c_array).T).T
 
 print(f"\nReduced cost matrix: \n{c_red}")
+
+zero_seqs = assign_opt(c_red)
+
+print(f"sequences: {zero_seqs}")
+
+print(f"Found {len(zero_seqs)} valid sequence(s):")
+for seq in zero_seqs:
+    print(seq)
+
 
 BLOCK_COST = -1
 # crossed = 0 #start iterating from zero crossed out rows/cols
@@ -159,7 +202,7 @@ while (not_allocated):
     c_work = c_red #get a working copy of reduced costs array
     crossed = 0
     
-    # 3.1. Cross out zeros 'efficiently'
+    # 5.1. Cross out zeros 'efficiently'
     while(np.count_nonzero(c_red == 0) != 0): #there are still zeros ...
         nulls_on_rows = cross_out_nulls(c_red)  #check the nulls on rows
         nulls_on_cols = cross_out_nulls(c_red.T) #check the nulls on cols
@@ -177,6 +220,6 @@ while (not_allocated):
         print(f"crossed: {crossed}")
 
     #if crossed == len(c_red): #optimum solution is possible
-        # 3.2. Allocate on zeros in c_red array
+        # 5.2. Allocate on zeros in c_red array
     not_allocated = False    
 
