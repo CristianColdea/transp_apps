@@ -177,6 +177,7 @@ def optimize(c_nulls:np.ndarray) -> None:
 
 
 #5. Functions call, assignment and total cost
+# Testing the assignment on zeros function
 c_red = reduce_matrix(reduce_matrix(c_array).T).T
 
 print(f"\nReduced cost matrix: \n{c_red}")
