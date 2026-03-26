@@ -114,12 +114,15 @@ def reduce_matrix(c:np.ndarray) -> np.ndarray:
     Takes as input the assignment cost numpy matrix.
     Returns reduced matrix on rows.
     """
+
+    # make copy to combat unwanted side effects
+    c_cp = c.copy()
     # check if passed arg is a square matrix
-    if c.shape[0] != c.shape[1]:
-        print(f"\n🛑Matrix Shape Error: {c.shape}")
+    if c_cp.shape[0] != c_cp.shape[1]:
+        print(f"\n🛑Matrix Shape Error: {c_cp.shape}")
         exit(1)
 
-    return (c - np.min(c, axis=1, keepdims=True))
+    return (c_cp - np.min(c_cp, axis=1, keepdims=True))
 
 #2. Function to efficiently cross out zeros in reduced costs matrix
 def cross_out_nulls(c_red:np.ndarray) -> list[int]:
@@ -128,8 +131,11 @@ def cross_out_nulls(c_red:np.ndarray) -> list[int]:
     Counts the zeros on each row.
     Returns a list with number of zeros on each row.
     """
+
+    # make copy to combat unwanted side effects
+    c_red_cp = c_red.copy()
     nulls = []
-    for row in c_red:
+    for row in c_red_cp:
         nulls.append(np.count_nonzero(row == 0))
 
     return nulls
@@ -142,11 +148,14 @@ def assign_opt(c_red:np.ndarray) -> list[list[tuple]]:
     there is exactly one zero in each row and each column.
     Returns a list with found sequences.
     """
+
+    # make copy to combat unwanted side effects
+    c_red_cp = c_red.copy()
  
-    n = c_red.shape[0]
+    n = c_red_cp.shape[0]
     
     # Pre-compute the column indices of zeros for each row to speed up lookup
-    zero_positions = [np.where(c_red[r] == 0)[0] for r in range(n)]
+    zero_positions = [np.where(c_red_cp[r] == 0)[0] for r in range(n)]
     
     all_sequences = []
 
@@ -172,24 +181,46 @@ def assign_opt(c_red:np.ndarray) -> list[list[tuple]]:
 
 #4. Optimization function
 def optimize(c_nulls:np.ndarray) -> None:
+    """
+    Optimizes the reduced costs matrix with nout enough zeros.
+    Returns the optimized assignment
+    """
+
+    # make a copy to combat unwanted effects
+    c_nulls_cp = c_nulls.copy()
 
     return None
 
+def best_zeros(seq:list[tuple], c_array: np.ndarray) -> tuple:
+    """
+    Gets the assignment solution and its associated total cost.
+    Takes as input the assignment sequence and the initial cost
+    matrix.
+    Returnes a tuple with total cost and the numpy array of assignment.
+    """
+
+    # make copies to combat unwanted side effects
+    seq_cp = seq.copy()
+    c_cp = c_array.copy()
+
+    # create a matrix with zeros for assignment
+
+    assignment_matrix = np.zeros_like(c_array, dtype=int)
+
+    for tpl in seq_cp:
+        assignment_matrix[tpl[0], tpl[1]] = c_cp[tpl[0], tpl[1]]
+
+    assignment_cost = np.sum(assignment_matrix)
+
+    return (assignment_cost, assignment_matrix)
+
+# print(best_zeros([(0,3), (1,2), (2,0), (3,1)], c_array)[1])
 
 #5. Functions call, assignment and total cost
 # Testing the assignment on zeros function
 c_red = reduce_matrix(reduce_matrix(c_array).T).T
 
 print(f"\nReduced cost matrix: \n{c_red}")
-
-zero_seqs = assign_opt(c_red)
-
-print(f"sequences: {zero_seqs}")
-
-print(f"Found {len(zero_seqs)} valid sequence(s):")
-for seq in zero_seqs:
-    print(seq)
-
 
 BLOCK_COST = -1
 # crossed = 0 #start iterating from zero crossed out rows/cols
@@ -200,16 +231,18 @@ not_allocated = True
 (7, 6, 4, 3), (9, 5, 2, 6), (4, 8, 5, 3), (6, 2, 5, 8)
 
 while (not_allocated):
-    c_work = c_red #get a working copy of reduced costs array
+    c_work = c_red.copy() #get a working copy of reduced costs array
+    print(f"c_copy: \n{c_red.copy()}")
     crossed = 0
     
     # 5.1. Cross out zeros 'efficiently'
-    while(np.count_nonzero(c_red == 0) != 0): #there are still zeros ...
-        nulls_on_rows = cross_out_nulls(c_red)  #check the nulls on rows
-        nulls_on_cols = cross_out_nulls(c_red.T) #check the nulls on cols
+    while(np.count_nonzero(c_work == 0) != 0): #there are still zeros ...
+        nulls_on_rows = cross_out_nulls(c_work)  #check the nulls on rows
+        nulls_on_cols = cross_out_nulls(c_work.T) #check the nulls on cols
 
         if (max(nulls_on_rows) >= max(nulls_on_cols)): #more nulls on rows ...
             to_cross_out = nulls_on_rows.index(max(nulls_on_rows))
+            #print(f"c_work: {c_work}")
             c_work[to_cross_out] = BLOCK_COST #replace crossed outs
             crossed += 1 #count crossed outs
         else: #more nulls on cols
@@ -217,10 +250,24 @@ while (not_allocated):
             c_work.T[to_cross_out] = BLOCK_COST #replace crossed outs
             crossed += 1 #count crossed outs
 
-        print(f"\nAfter: {crossed} cross out: \n{c_red}")
+        print(f"\nAfter: {crossed} cross out: \n{c_work}")
         print(f"crossed: {crossed}")
 
-    #if crossed == len(c_red): #optimum solution is possible
-        # 5.2. Allocate on zeros in c_red array
-    not_allocated = False    
 
+    if crossed == len(c_red): #optimum solution is possible
+        # 5.2. Allocate on zeros in c_red array
+        zero_seqs = assign_opt(c_red)
+        print(f"zero_seqs: {zero_seqs}")
+        possible_assignments = {}
+        for seq in zero_seqs:
+            print(f"sequence: {seq}")
+            possible_assignments[best_zeros(seq, c_array)[0]] = \
+                                 best_zeros(seq, c_array)[1]
+
+        delivered_assignment = possible_assignments[min(possible_assignments)]
+
+        print(f"\nDelivered assignment solution: \n{delivered_assignment}")
+        print(f"\nTotal cost of assignment: {max(possible_assignments)}")
+
+        not_allocated = False    
+        
