@@ -105,7 +105,7 @@ except ValueError as e:
 # create a matrix from costs list of lists
 c_array = np.array(c_lst)
     
-print(f"\nInput data numpy array: \n{c_array}")
+# print(f"\nInput data numpy array: \n{c_array}")
 
 # 1. Function to reduce cost matrix on rows or columns
 def reduce_matrix(c:np.ndarray) -> np.ndarray:
@@ -232,7 +232,7 @@ not_allocated = True
 
 while (not_allocated):
     c_work = c_red.copy() #get a working copy of reduced costs array
-    print(f"c_copy: \n{c_red.copy()}")
+    # print(f"c_copy: \n{c_red.copy()}")
     crossed = 0
     
     # 5.1. Cross out zeros 'efficiently'
@@ -240,18 +240,25 @@ while (not_allocated):
         nulls_on_rows = cross_out_nulls(c_work)  #check the nulls on rows
         nulls_on_cols = cross_out_nulls(c_work.T) #check the nulls on cols
 
+        crossed_rows = [] #store the indexes of crossed out rows
+        crossed_cols = [] #store the indexes of crossed out cols
+        
         if (max(nulls_on_rows) >= max(nulls_on_cols)): #more nulls on rows ...
             to_cross_out = nulls_on_rows.index(max(nulls_on_rows))
-            #print(f"c_work: {c_work}")
             c_work[to_cross_out] = BLOCK_COST #replace crossed outs
+            crossed_rows.append(nulls_on_rows)
             crossed += 1 #count crossed outs
         else: #more nulls on cols
             to_cross_out = nulls_on_cols.index(max(nulls_on_cols))
             c_work.T[to_cross_out] = BLOCK_COST #replace crossed outs
+            crossed_cols.append(nulls_on_cols)
             crossed += 1 #count crossed outs
 
         print(f"\nAfter: {crossed} cross out: \n{c_work}")
         print(f"crossed: {crossed}")
+
+        print(f"\nCrossed out rows: {crossed_rows}")
+        print(f"\nCrossed out cols: {crossed_cols}")
 
 
     if crossed == len(c_red): #optimum solution is possible
@@ -269,5 +276,12 @@ while (not_allocated):
         print(f"\nDelivered assignment solution: \n{delivered_assignment}")
         print(f"\nTotal cost of assignment: {max(possible_assignments)}")
 
-        not_allocated = False    
-        
+        not_allocated = False
+    else:
+        # 5.3. Get the indexes of intersection of crossed out rows/cols
+        intersections = []
+        for indxr in crossed_rows:
+            for indxc in crossed_cols:
+                instersection.append((indxr, indxc))
+        print(f"\nIntersections: {intersections}")
+        not_allocated = False   
