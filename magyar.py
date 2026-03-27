@@ -235,23 +235,23 @@ while (not_allocated):
     # print(f"c_copy: \n{c_red.copy()}")
     crossed = 0
     
+    crossed_rows = [] #store the indexes of crossed out rows
+    crossed_cols = [] #store the indexes of crossed out cols
+
     # 5.1. Cross out zeros 'efficiently'
     while(np.count_nonzero(c_work == 0) != 0): #there are still zeros ...
         nulls_on_rows = cross_out_nulls(c_work)  #check the nulls on rows
         nulls_on_cols = cross_out_nulls(c_work.T) #check the nulls on cols
-
-        crossed_rows = [] #store the indexes of crossed out rows
-        crossed_cols = [] #store the indexes of crossed out cols
-        
+                
         if (max(nulls_on_rows) >= max(nulls_on_cols)): #more nulls on rows ...
             to_cross_out = nulls_on_rows.index(max(nulls_on_rows))
             c_work[to_cross_out] = BLOCK_COST #replace crossed outs
-            crossed_rows.append(nulls_on_rows)
+            crossed_rows.append(to_cross_out)
             crossed += 1 #count crossed outs
         else: #more nulls on cols
             to_cross_out = nulls_on_cols.index(max(nulls_on_cols))
             c_work.T[to_cross_out] = BLOCK_COST #replace crossed outs
-            crossed_cols.append(nulls_on_cols)
+            crossed_cols.append(to_cross_out)
             crossed += 1 #count crossed outs
 
         print(f"\nAfter: {crossed} cross out: \n{c_work}")
@@ -282,6 +282,15 @@ while (not_allocated):
         intersections = []
         for indxr in crossed_rows:
             for indxc in crossed_cols:
-                instersection.append((indxr, indxc))
+                intersections.append((indxr, indxc))
         print(f"\nIntersections: {intersections}")
-        not_allocated = False   
+        # 5.4. Optimize the solution
+        min_opt = np.min(c_work[c_work > -1])
+        print(f"\nmin_opt: \n{min_opt}")
+        c_work = np.where(c_work > -1, c_work - min_opt, c_work)
+        for inters in intersections:
+            c_work[inters[0], inters[1]] = \
+                c_red[inters[0], inters[1]] + min_opt
+        c_work = np.where(c_work == -1, c_red, c_work)
+        c_red = c_work
+        print(f"\nc_red: \n{c_red}")
