@@ -20,7 +20,8 @@ def get_user_input() -> list[list[int]]:
     Validates and safely converts the string inputs to required Python lists.
     """
     print("""
-The following section provides the means of inputting data for the transportation problem.
+The following section provides the means of inputting data for the assignment
+problem.
 Required data: **assignment cost matrix (C)**.
 
 Input format example:
@@ -243,20 +244,20 @@ while (not_allocated):
             crossed_cols.append(to_cross_out)
             crossed += 1 #count crossed outs
 
-        print(f"\nAfter: {crossed} cross out: \n{c_work}")
-        print(f"crossed: {crossed}")
+        # print(f"\nAfter: {crossed} cross out: \n{c_work}")
+        # print(f"crossed: {crossed}")
 
-        print(f"\nCrossed out rows: {crossed_rows}")
-        print(f"\nCrossed out cols: {crossed_cols}")
+        # print(f"\nCrossed out rows: {crossed_rows}")
+        # print(f"\nCrossed out cols: {crossed_cols}")
 
 
     if crossed == len(c_red): #optimum solution is possible
         # 5.2. Allocate on zeros in c_red array
         zero_seqs = assign_opt(c_red)
-        print(f"zero_seqs: {zero_seqs}")
+        # print(f"zero_seqs: {zero_seqs}")
         possible_assignments = {}
         for seq in zero_seqs:
-            print(f"sequence: {seq}")
+            # print(f"sequence: {seq}")
             possible_assignments[best_zeros(seq, c_array)[0]] = \
                                  best_zeros(seq, c_array)[1]
 
@@ -272,14 +273,14 @@ while (not_allocated):
         for indxr in crossed_rows:
             for indxc in crossed_cols:
                 intersections.append((indxr, indxc))
-        print(f"\nIntersections: {intersections}")
+        # print(f"\nIntersections: {intersections}")
         # 5.4. Optimize the solution
         min_opt = np.min(c_work[c_work > -1])
-        print(f"\nmin_opt: \n{min_opt}")
+        # print(f"\nmin_opt: \n{min_opt}")
         c_work = np.where(c_work > -1, c_work - min_opt, c_work)
         for inters in intersections:
             c_work[inters[0], inters[1]] = \
                 c_red[inters[0], inters[1]] + min_opt
         c_work = np.where(c_work == -1, c_red, c_work)
         c_red = c_work
-        print(f"\nc_red: \n{c_red}")
+        # print(f"\nc_red: \n{c_red}")
