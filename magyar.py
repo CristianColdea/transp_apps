@@ -179,24 +179,13 @@ def assign_opt(c_red:np.ndarray) -> list[list[tuple]]:
     backtrack(0, set(), [])
     return all_sequences
 
-#4. Optimization function
-def optimize(c_nulls:np.ndarray) -> None:
-    """
-    Optimizes the reduced costs matrix with nout enough zeros.
-    Returns the optimized assignment
-    """
-
-    # make a copy to combat unwanted effects
-    c_nulls_cp = c_nulls.copy()
-
-    return None
-
+#4. Optimization section
 def best_zeros(seq:list[tuple], c_array: np.ndarray) -> tuple:
     """
     Gets the assignment solution and its associated total cost.
     Takes as input the assignment sequence and the initial cost
     matrix.
-    Returnes a tuple with total cost and the numpy array of assignment.
+    Returns a tuple with total cost and the numpy array of assignment.
     """
 
     # make copies to combat unwanted side effects
