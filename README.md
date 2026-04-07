@@ -49,8 +49,8 @@ List of features ready and TODOs for future development
 * ~~Code optimization with non-basic variables~~
 * ~~Code optimization with Stepping Stone Method~~
 * ~~Develop transportation solution with MS Excel~~
-* Code Hungarian Method for resources assignment
-* and many more will be updated as the work progresses.
+* ~~Code Hungarian Method for resources assignment
+* and many more will be updated as the work progresses.~~
 
 ## Status
 Project is: _in progress_
