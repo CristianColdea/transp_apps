@@ -51,7 +51,8 @@ List of features ready and TODOs for future development
 * ~~Develop transportation solution with MS Excel~~
 * ~~Code Hungarian Method for resources assignment~~
 * ~~and many more will be updated as the work progresses.~~
-* Code a cost function
+* ~~Code a depreciation function with plottings.~~
+
 
 ## Status
 Project is: _in progress_
