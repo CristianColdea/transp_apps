@@ -1,7 +1,0 @@
-from_leg_group_id,to_leg_group_id,transfer_count,duration_limit,duration_limit_type,fare_transfer_type
-surface_only_trip,surface_only_trip,-1,5400,0,0
-metro_only_trip,metro_only_trip,-1,,,0
-integrated_trip_surface,integrated_trip_surface,-1,7200,0,0
-integrated_trip_metro,integrated_trip_metro,-1,,,0
-integrated_trip_surface,integrated_trip_metro,,7200,1,0
-integrated_trip_metro,integrated_trip_surface,,7200,0,0

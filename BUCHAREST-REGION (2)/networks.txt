@@ -1,3 +1,0 @@
-network_id,network_name
-metro_network,Rețea metrou
-surface_network,Rețea transport de suprafață

@@ -1,7 +1,0 @@
-fare_media_id,fare_media_name,fare_media_type
-cemv,Plată contactless (carduri bancare),3
-metro_card,Card contactless metrou,2
-metro_mag,Cartelă magnetică metrou,1
-activ,Card ACTIV,2
-multiplu,Card MULTIPLU,1
-integrated_card,Card integrat de unică folosință,1
