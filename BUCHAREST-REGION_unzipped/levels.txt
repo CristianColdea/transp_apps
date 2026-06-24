@@ -1,3 +1,0 @@
-level_id,level_index,level_name
-0,-1,Nivel subteran / Underground level
-1,0,Nivelul străzii (suprafață) / Street level (surface)
