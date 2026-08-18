@@ -496,3 +496,28 @@ gvalsr_fin = GravitMod.gravmod_fin(ffs_f, ccoeffsA, P_is, A_js)
 u_a, u_t = modopt(tca, tct, tda, tdt)
 
 w_a, w_t = logit(u_a, u_t)
+
+# The adjusted travels, gravitational model
+travs_adj_fin = [[114, 375, 244],
+                  [298, 240, 50],
+                  [310, 171, 8]]
+
+# applying weights to travels
+travs_adj_fin_flatten = []
+for row in travs_adj_fin:
+    for travel in row:
+        travs_adj_fin_flatten.append(travel)
+
+print("flatten final travels, ", travs_adj_fin_flatten)
+
+travels_auto = []
+for weight, travel in zip(w_a, travs_adj_fin_flatten):
+    travels_auto.append(round(weight * travel, 0))
+
+print("Auto travels, ", travels_auto)
+travels_transit = []
+for travels, travels_auto in zip(travs_adj_fin_flatten, travels_auto):
+    travels_transit.append(travels - travels_auto)
+
+print("Transit travels, ", travels_transit)
+
