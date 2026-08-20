@@ -70,7 +70,8 @@ class GravitMod:
         self.P_is = P_is
         self.A_js = A_js
 
-    def gravmod_init(travs,ffs, k_ijs):
+    def gravmod_init(travs:list[list[int]],ffs:list[list[float]],
+                     k_ijs:list[list[int]]) -> list[list[int]]:
         """
         Method to compute gravitational model values in order to determine the
         calibration factors.
