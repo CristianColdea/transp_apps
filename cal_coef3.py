@@ -12,7 +12,7 @@ from math import e
 
 logging.basicConfig(
     level=logging.DEBUG,  # switch to logging.INFO to silence the .debug() calls
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d: %(message)s",
 )
 logger = logging.getLogger(__name__)
 
