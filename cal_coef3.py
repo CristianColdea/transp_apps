@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # accurate for "number of travels", but Python's generic containers are
 # invariant, so a list[list[int]] can't be passed where list[list[float]]
 # is expected -- it's simpler and equally correct to use float everywhere.
+# And took some time to understand this subtlety ...
 Matrix = list[list[float]]
 
 # number of travels as a matrix with produced travels on lines
@@ -112,10 +113,7 @@ class GravitMod:
         ffs_tt = list(zip(*ffs))
         travs_t = [list(sublist) for sublist in travs_tt]
         ffs_t = [list(sublist) for sublist in ffs_tt]
-        # print("travs_tt, ", travs_tt)
-        # print("travs_t, ", travs_t)
-        # print(ffs_t)
-    
+            
         # get attracted travels sums (cycling on transposes)
         s_Aj: list[float] = []   # store the attracted sums
 
@@ -159,27 +157,17 @@ class GravitMod:
         for val in gvals_init:
             gvals_init_r.append(round(val))
     
-        # print("Rounded number of initial travels, ", gvals_init_r)
-
         # group flatten list 'gvals_init_r' as a matrix
         gvals_init_m = [gvals_init_r[i:i + 3] for i in range(0,
                          len(gvals_init_r), 3)]
         # print(gvals_init_m)
         logger.debug("Matrix of rounded numbers, %s", gvals_init_m)
 
-        # check produced travels sum
-        # for p1, p2 in zip(travs, gvals_init_m):
-            # print(sum(p1) == sum(p2))
-
+     
         # check attracted travels sum
         # transpose the matrix first
         gvals_init_m_tt = list(zip(*gvals_init_m))
-        # print(gvals_init_m_tt, travs_tt)
-        # for a1, a2 in zip(gvals_init_m_tt, travs_tt):
-            # print(sum(a1) == sum(a2))
-            # print(sum(a1))
-            # print(sum(a2))
-
+    
         return gvals_init_m
 
     @staticmethod
@@ -250,20 +238,14 @@ class GravitMod:
             for row in travsc:
                 s_Pic.append(sum(row))
             
-            #print()
-            #print("Enter iter_adj_in method.")
-            #print("s_Pih, ", s_Pih)
-            #print("s_Pic, ", s_Pic)
-            
+                        
             cmp_flg = comp(s_Pih, s_Pic, tlr)
-            #print(cmp_flg)
+            
             if (comp(s_Pih, s_Pic, tlr) == False):
                 ccsi: list[float] = []   # list to store produced travels coefficients
                 for ph, pc in zip(s_Pih, s_Pic):
                     ccsi.append(round(ph/pc, 3))
 
-                #print()
-                #print("travs, ", travs)
                 logger.debug("travsc, %s", travsc)
                 logger.debug("coefficients on produced travels, %s", ccsi)
 
@@ -272,10 +254,6 @@ class GravitMod:
             
                 i += 1
 
-                #print()
-                #print("travsc after pass  i = ", i, "is ", travsc)
-            
-            
             # *********
             # working on attracted travels
 
@@ -286,31 +264,19 @@ class GravitMod:
             # travs_t = [list(sublist) for sublist in travs_tt]
             # travsc_t = [list(sublist) for sublist in travsc_tt]
 
-            # print()
-            # print("travs_t, ", travs_t)
-            # print("travsc_t ", travsc_t)
-    
-                    
+                                
             # get attracted travels sums on computed travels (cycling on transposes)
             s_Ajc: list[float] = []   # store the attracted sums
 
             for ccol in travsc_tt:
                 s_Ajc.append(sum(ccol))
             
-            # cmp_flg = comp(s_Ajh, s_Ajc, tlr)
-            # print(cmp_flg)
-            
-            #print()
-            #print("s_Ajh, ", s_Ajh)
-            #print("s_Ajc, ", s_Ajc)
-            
+                        
             if (comp(s_Ajh, s_Ajc, tlr) == False):
                 ccsj: list[float] = []   # list to store attracted travels coefficients
                 for ah, ac in zip(s_Ajh, s_Ajc):
                     ccsj.append(round(ah/ac, 3))
 
-                #print()
-                #print("travs, ", travs)
                 logger.debug("travsc, %s", travsc)
                 logger.debug("coefficients on attracted travels, %s", ccsj)
 
@@ -319,15 +285,8 @@ class GravitMod:
             
                 j += 1
 
-               #print()
-               #print("travsc_tt after pass j = ", j, "is ", travsc_tt)
-                
-                
-
+               
             travsc = [list(row) for row in zip(*travsc_tt)]
-
-            #print()
-            #print("travsc,  ", travsc)
             
             # update the attracted sums
                 
@@ -337,34 +296,24 @@ class GravitMod:
             for ccol in travsc_tt:
                 s_Ajc.append(sum(ccol))
 
-            #print()
-            #print("s_Ajc, ", s_Ajc)
-
             # update the produced sums
             s_Pic.clear()
 
             for row in travsc:
                 s_Pic.append(sum(row))
 
-            #print()
-            #print("s_Pic, ", s_Pic)
-
-            cmp_flg = comp(s_Ajh, s_Ajc, tlr)
-            #print("Flag on attracted, ", comp(s_Ajh, s_Ajc, tlr))
             
+            cmp_flg = comp(s_Ajh, s_Ajc, tlr)
+                        
             cmp_flg = comp(s_Pih, s_Pic, tlr)
-            #print("Flag on produced, ", cmp_flg)
-
+            
             travscr = []     # list to store rounded values, flatten form
             for row in travsc:
                 for val in row:
                     travscr.append(round(val))
 
-        #print()
-        #print("Final rounded and flatten, ", travscr)
         travscrm = [travscr[i:i + 3] for i in range(0, len(travscr), 3)]
             
-        #print()
         logger.info("Final rounded matrix, %s", travscrm)
         logger.debug("Historical travels matrix, %s", travs)
         logger.debug("i is, %s", i)
