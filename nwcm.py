@@ -8,9 +8,19 @@ Returns the allocation table, whether the feasible solution is possible, i.e.,
 bool, and the allocation total cost.
 """
 
+from __future__ import annotations
+
 import numpy as np
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, NamedTuple
 import ast # Required for safe string evaluation
+import logging
+from math import e
+
+logging.basicConfig(
+    level=logging.DEBUG,  # switch to logging.INFO to silence the .debug() calls
+    format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # +++++ USER INTERFACE AND INPUT HANDLING SECTION +++++
 
@@ -86,55 +96,76 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
         return c_lst, s_lst, d_lst
 
     except ValueError as e:
-        print(f"\n❌ Error: Failed to parse input. Please check your formatting.")
-        print(f"Details: {e}")
+        logger.error(f"\n❌ Error: Failed to parse input. Please check your formatting.")
+        logger.error(f"Details: {e}")
         exit(1)
     except SyntaxError:
-        print(f"\n❌ Error: Input format is invalid. Ensure you use proper list/tuple syntax (e.g., (10, 15) or [10, 15]).")
+        logger.error(f"\n❌ Error: Input format is invalid. Ensure you use proper list/tuple syntax (e.g., (10, 15) or [10, 15]).")
         exit(1)
 
 
 # --- Execution Start ---
 
-c_lst, s_lst, d_lst = get_user_input()
+# Create the first structure for handling user input
+class RawInput(NamedTuple):
+    cost: List[List[int]]
+    supply: List[int]
+    demand: List[int]
 
-sum_s = sum(s_lst)
-sum_d = sum(d_lst)
+# Get the basic user input
+user_cost, user_supply, user_demand = get_user_input()
 
-# The assertions function remains the same, but it is called after successful parsing.
+# Bundle the user input into the first structure for future usage
+entries = RawInput(cost=user_cost, supply=user_supply, demand=user_demand)
 
-def assertions(c: List[List[int]], s: List[int], d: List[int]) -> None:
-    # ... (Your original assertions function)
+# The assertions function it is called after successful parsing.
+
+def assertions(entries: RawInput) -> None:
     # Using the standard type hint List instead of list for compatibility with python versions < 3.9
     
     """
     Function to check the dimensional 'sanity', i.e., compatibility,
     of the cost matrix with supply and demand lists/arrays.
-    Takes as input the cost matrix, supply and demand arrays.
+    Takes as input the cost matrix, supply and demand arrays from the
+    first structure.
     Signals problems and aborts execution.
     """
-    if len(c) != len(s):
-        raise ValueError(f"Dimensional error: Cost matrix has {len(c)} rows, but Supply list has {len(s)} elements.")
-    if len(c[0]) != len(d):
-        raise ValueError(f"Dimensional error: Cost matrix has {len(c[0])} columns, but Demand list has {len(d)} elements.")
-    if sum(s) != sum(d):
-        raise ValueError(f"Transportation problem is **unbalanced**: Sum of Supply ({sum(s)}) != Sum of Demand ({sum(d)}).")
+    if len(entries.cost) != len(entries.supply):
+        raise ValueError(f"Dimensional error: Cost matrix has \
+                        {len(entries.cost)} rows, but Supply list has \
+                        {len(entries.supply)} elements.")
+    if len(entries.cost[0]) != len(entries.demand):
 
+        raise ValueError(f"Dimensional error: Cost matrix has \
+        {len(entries.cost[0])} columns, but Demand list has \
+        {len(entries.demand)} elements.")
+    if sum(entries.supply) != sum(entries.demand):
+        raise ValueError(f"Transportation problem is **unbalanced**: \
+                Sum of Supply \
+                ({sum(entries.supply)}) != Sum of Demand \
+                ({sum(entries.demand)}).")
 
 try:
-    assertions(c_lst, s_lst, d_lst)
+    assertions(entries)
 except ValueError as e:
-    print(f"\n🛑 Validation Error: {e}")
+    logger.error(f"\n🛑 Validation Error: {e}")
     exit(1)
 
 
-# create matrices and arrays for working data
-c_array = np.array(c_lst)
-s_array = np.array(s_lst)
-d_array = np.array(d_lst)
+# Create matrices and arrays for working data
+# Bundle the computational arrays into a second structure
+
+class ComputationalData(NamedTuple):
+    cost_array: np.ndarray
+    supply_array: np.ndarray
+    demand_array: np.ndarray
+    
+arrays = ComputationalData(cost_array=np.array(entries.cost),
+                            supply_array=np.array(entries.supply),
+                            demand_array=np.array(entries.demand))
 
 # the core code of the script
-def allocNW(s_array: np.ndarray, d_array: np.ndarray) -> np.ndarray:
+def allocNW(arrays: ComputationalData) -> np.ndarray:
     """
     Function to determine a BFS with NW Corner Method.
     Takes as inputs the supply and demand arrays and the matrix of zeros with
@@ -144,11 +175,11 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray) -> np.ndarray:
     """
 
     # 1. Ensure Copies for Side-Effect-Free Operation
-    s_cp = s_array.copy()  # Working copy of Supply
-    d_cp = d_array.copy()  # Working copy of Demand
+    s_cp = arrays.supply_array.copy()  # Working copy of Supply
+    d_cp = arrays.demand_array.copy()  # Working copy of Demand
     
     # 2. Generate the properly shaped zeros array
-    allocation_matrix = np.zeros_like(c_array, dtype=int) 
+    allocation_matrix = np.zeros_like(arrays.cost_array, dtype=int) 
 
     # 3. Make the allocation according to the NW method
     for s in range(len(s_cp)):
@@ -163,14 +194,14 @@ def allocNW(s_array: np.ndarray, d_array: np.ndarray) -> np.ndarray:
 # Example usage within the main script structure:
 
 # The core function call
-zrs_alloc_array = allocNW(s_array, d_array)
+zrs_alloc_array = allocNW(arrays)
 
-print("\n### Allocation Results ###")
-print("Alloc matrix (Decision Variables) with NWCM:") 
-print(zrs_alloc_array)
+print()
+logger.info("### Allocation Results ###")
+logger.info("Alloc matrix (Decision Variables) with NWCM:\n%s", zrs_alloc_array) 
 
 # ... (rest of the script follows: sum_check, feasibility_cost) ...
-def feasibility_cost(allocation_matrix: np.ndarray, cost_matrix: np.ndarray) -> Tuple[bool, int]:
+def feasibility_cost(allocation_matrix: np.ndarray, arrays: ComputationalData) -> Tuple[bool, int]:
     """
     Checks for non-degenerate Basic Feasible Solution (BFS) and computes the total cost.
 
@@ -192,7 +223,7 @@ def feasibility_cost(allocation_matrix: np.ndarray, cost_matrix: np.ndarray) -> 
     # 1. Calculate Total Cost (using NumPy for efficiency)
     # The element-wise multiplication of allocation * cost gives the total cost 
     # for each cell, and then we sum the entire matrix.
-    total_cost = np.sum(allocation_matrix * cost_matrix)
+    total_cost = np.sum(allocation_matrix * arrays.cost_array)
     
     # 2. Check Feasibility (Non-Degeneracy)
     # The shape gives us the dimensions: (m, n) -> (rows, columns)
@@ -231,26 +262,22 @@ def sum_check(allocation_matrix: np.ndarray) -> int:
     # Use NumPy's built-in sum() for a direct, efficient calculation
     return allocation_matrix.sum()
 
-# ... (Previous code: c_array, s_array, d_array, zrs_alloc_array defined) ...
-
 # Final output section uses a try/except block to catch the new ValueError
 
-print("\n### Final Cost and Feasibility Check ###")
+logger.info("\n### Final Cost and Feasibility Check ###")
 
 # Check total quantity matches
 sum_z = sum_check(zrs_alloc_array)
-print("Sum of allocated quantities checks the total supply/demand:", sum_z == sum(s_array))
+logger.info("Sum of allocated quantities checks the total supply/demand:%s", sum_z == sum(arrays.supply_array))
 
 
 try:
-    # Function call is also simplified (fewer arguments needed)
-    is_feasible, total_cost = feasibility_cost(zrs_alloc_array, c_array)
+    # Function call is simplified (fewer arguments needed)
+    is_feasible, total_cost = feasibility_cost(zrs_alloc_array, arrays)
 
-    print("Basic solution is feasible:", is_feasible)
-    print(f"North West Corner Method total allocation cost: {total_cost:,}")
+    logger.info("Basic solution is feasible:%s", is_feasible)
+    logger.info("North West Corner Method total allocation cost:%s", total_cost)
 
 except ValueError as e:
     # Gracefully handle the degeneracy error raised by the function
-    print(f"\n🛑 Error: {e}")
-    # You can now choose to exit, log, or prompt the user for other action here.
-    # For now, we will just print the error and let the program naturally end.
+    logger.error(f"\n🛑 Error: {e}")
