@@ -11,16 +11,34 @@ bool, and the allocation total cost.
 from __future__ import annotations
 
 import numpy as np
-from typing import List, Tuple, Any, NamedTuple
+from typing import List, Tuple, NamedTuple
 import ast # Required for safe string evaluation
 import logging
-from math import e
 
 logging.basicConfig(
     level=logging.DEBUG,  # switch to logging.INFO to silence the .debug() calls
     format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def parse_matrix_literal(raw: str) -> List[List[int]]:
+    """
+    Parse a cost-matrix string as a single Python literal.
+
+    Accepts any nesting style ast.literal_eval understands -- rows as
+    tuples or lists, with or without an outer wrapper, with or without
+    spaces -- rather than guessing the structure via string replacement.
+    A single bare row (e.g. "(1, 2, 3)") is normalized into a one-row
+    matrix so the return shape is always List[List[int]].
+    """
+    parsed = ast.literal_eval(raw.strip())
+
+    if parsed and not isinstance(parsed[0], (list, tuple)):
+        parsed = (parsed,)
+
+    return [list(row) for row in parsed]
+
 
 # +++++ USER INTERFACE AND INPUT HANDLING SECTION +++++
 
@@ -50,58 +68,44 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
         # --- Safe Parsing using ast.literal_eval ---
         # This safely evaluates a string containing a Python literal structure (list/tuple).
 
-        # Parsing Supply and Demand lists
-        if type(ast.literal_eval(s_str.strip())) == tuple:
-            s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
+        # Parsing Supply and Demand lists.
+        # Evaluate once, then check isinstance against BOTH list and tuple --
+        # the input format we advertise above accepts either, e.g. (10, 15)
+        # or [10, 15], and ast.literal_eval returns a `list` for the bracket
+        # form, not a `tuple`, so checking only `== tuple` silently mishandles
+        # the bracket form (it gets wrapped as a single-element list instead
+        # of unpacked).
+        parsed_supply = ast.literal_eval(s_str.strip())
+        if isinstance(parsed_supply, (list, tuple)):
+            s_lst: List[int] = list(parsed_supply)
         else:
-            s_lst = [ast.literal_eval(s_str.strip())]
+            s_lst = [parsed_supply]
 
-        if type(ast.literal_eval(d_str.strip())) == tuple:
-            d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
-
+        parsed_demand = ast.literal_eval(d_str.strip())
+        if isinstance(parsed_demand, (list, tuple)):
+            d_lst: List[int] = list(parsed_demand)
         else:
-            d_lst = [ast.literal_eval(d_str.strip())]
+            d_lst = [parsed_demand]
 
+        # Parsing Cost Matrix. Delegated to parse_matrix_literal() -- see
+        # its docstring -- instead of manually splitting/replacing on
+        # bracket characters, which only matched a couple of anticipated
+        # spacing/punctuation patterns.
+        c_lst = parse_matrix_literal(c_str)
 
-        # Parsing Cost Matrix (handling multiple rows/tuples)
-        c_lst: List[List[int]] = []
-        # Normalizing input: replace outer brackets/parentheses, then split by row separator
-        c_rows_str = c_str.strip().strip('[]()')
-        
-        # Determine the row delimiter based on common matrix input styles
-        # If it's a list of lists, split by the comma outside of inner lists/tuples
-        if any(char in c_rows_str for char in ['[', '(']):
-             # If input is like (1, 2), (3, 4) - we split by '), ('
-             c_rows_str = c_rows_str.replace('], [', ')|(').replace('), (', ')|(') 
-             row_list = c_rows_str.split('|')
-        else:
-             # Assuming input is comma-separated tuples like: (1, 2, 3), (4, 5, 6)
-             # The original example implies splitting by a comma followed by a space. 
-             # We will try to parse each row separately.
-             row_list = c_rows_str.split('), ') # A simple heuristic for specific format
-
-        # Final list comprehension for parsing each row
-        for r_str in row_list:
-            # Clean up residual characters and evaluate
-            cleaned_r_str = r_str.strip(' )([]')
-            # If the string is empty after cleaning, skip (e.g., from extra commas)
-            if not cleaned_r_str:
-                continue
-            
-            # Reconstruct the tuple/list structure before evaluation for safety/compatibility
-        
-            evaluated_row = ast.literal_eval(f"({cleaned_r_str})") 
-            c_lst.append(list(evaluated_row))
-        
         return c_lst, s_lst, d_lst
 
-    except ValueError as e:
-        logger.error(f"\n❌ Error: Failed to parse input. Please check your formatting.")
-        logger.error(f"Details: {e}")
-        exit(1)
-    except SyntaxError:
-        logger.error(f"\n❌ Error: Input format is invalid. Ensure you use proper list/tuple syntax (e.g., (10, 15) or [10, 15]).")
-        exit(1)
+    except ValueError as exc:
+        # Don't log or exit() here -- this function's job is to report the
+        # problem, not decide the program's fate. Raise it and let the
+        # caller (main(), at the bottom of the script) decide whether to
+        # log, retry, or exit.
+        raise ValueError(f"Failed to parse input. Please check your formatting. Details: {exc}") from exc
+    except SyntaxError as exc:
+        raise ValueError(
+            "Input format is invalid. Ensure you use proper list/tuple syntax "
+            "(e.g., (10, 15) or [10, 15])."
+        ) from exc
 
 
 # --- Execution Start ---
@@ -112,11 +116,6 @@ class RawInput(NamedTuple):
     supply: List[int]
     demand: List[int]
 
-# Get the basic user input
-user_cost, user_supply, user_demand = get_user_input()
-
-# Bundle the user input into the first structure for future usage
-entries = RawInput(cost=user_cost, supply=user_supply, demand=user_demand)
 
 # The assertions function it is called after successful parsing.
 
@@ -134,6 +133,21 @@ def assertions(entries: RawInput) -> None:
         raise ValueError(f"Dimensional error: Cost matrix has \
                         {len(entries.cost)} rows, but Supply list has \
                         {len(entries.supply)} elements.")
+
+    # Check that every row has the same length. The next check below only
+    # looks at entries.cost[0] as a stand-in for "the matrix's column
+    # count" -- that's only valid once we know the matrix is rectangular,
+    # so this has to run first. Without it, a ragged matrix like
+    # [[1, 2, 3], [4, 5]] passes every other check here (row count matches
+    # supply, row 0's length matches demand, sums balance) and only fails
+    # later, deep inside np.array(), with a raw numpy traceback instead of
+    # a clean validation message.
+    row_lengths = [len(row) for row in entries.cost]
+    if len(set(row_lengths)) != 1:
+        raise ValueError(f"Dimensional error: Cost matrix rows have \
+                        inconsistent lengths {row_lengths}. \
+                        Every row must have the same number of columns.")
+
     if len(entries.cost[0]) != len(entries.demand):
 
         raise ValueError(f"Dimensional error: Cost matrix has \
@@ -145,12 +159,6 @@ def assertions(entries: RawInput) -> None:
                 ({sum(entries.supply)}) != Sum of Demand \
                 ({sum(entries.demand)}).")
 
-try:
-    assertions(entries)
-except ValueError as e:
-    logger.error(f"\n🛑 Validation Error: {e}")
-    exit(1)
-
 
 # Create matrices and arrays for working data
 # Bundle the computational arrays into a second structure
@@ -159,10 +167,7 @@ class ComputationalData(NamedTuple):
     cost_array: np.ndarray
     supply_array: np.ndarray
     demand_array: np.ndarray
-    
-arrays = ComputationalData(cost_array=np.array(entries.cost),
-                            supply_array=np.array(entries.supply),
-                            demand_array=np.array(entries.demand))
+
 
 # the core code of the script
 def allocNW(arrays: ComputationalData) -> np.ndarray:
@@ -191,16 +196,7 @@ def allocNW(arrays: ComputationalData) -> np.ndarray:
                     d_cp[d]-= allocation_matrix[s, d]    #update demand after alloc
     return allocation_matrix
 
-# Example usage within the main script structure:
 
-# The core function call
-zrs_alloc_array = allocNW(arrays)
-
-print()
-logger.info("### Allocation Results ###")
-logger.info("Alloc matrix (Decision Variables) with NWCM:\n%s", zrs_alloc_array) 
-
-# ... (rest of the script follows: sum_check, feasibility_cost) ...
 def feasibility_cost(allocation_matrix: np.ndarray, arrays: ComputationalData) -> Tuple[bool, int]:
     """
     Checks for non-degenerate Basic Feasible Solution (BFS) and computes the total cost.
@@ -223,7 +219,7 @@ def feasibility_cost(allocation_matrix: np.ndarray, arrays: ComputationalData) -
     # 1. Calculate Total Cost (using NumPy for efficiency)
     # The element-wise multiplication of allocation * cost gives the total cost 
     # for each cell, and then we sum the entire matrix.
-    total_cost = np.sum(allocation_matrix * arrays.cost_array)
+    total_cost = int(np.sum(allocation_matrix * arrays.cost_array))
     
     # 2. Check Feasibility (Non-Degeneracy)
     # The shape gives us the dimensions: (m, n) -> (rows, columns)
@@ -252,32 +248,63 @@ def feasibility_cost(allocation_matrix: np.ndarray, arrays: ComputationalData) -
     return (is_feasible_bfs, total_cost)
 
 
-# --- How to use it in the main script ---
-
 # sum_check function is also simplified:
 def sum_check(allocation_matrix: np.ndarray) -> int:
     """
     Function to check whether the sum of allocated quantities matches the total supply/demand.
     """
-    # Use NumPy's built-in sum() for a direct, efficient calculation
-    return allocation_matrix.sum()
-
-# Final output section uses a try/except block to catch the new ValueError
-
-logger.info("\n### Final Cost and Feasibility Check ###")
-
-# Check total quantity matches
-sum_z = sum_check(zrs_alloc_array)
-logger.info("Sum of allocated quantities checks the total supply/demand:%s", sum_z == sum(arrays.supply_array))
+    # Use NumPy's built-in sum() for a direct, efficient calculation.
+    # Wrapped in int() -- ndarray.sum() is typed to return Any by numpy's
+    # stubs, so without this mypy --strict flags an implicit Any leaking
+    # out of a function declared to return int.
+    return int(allocation_matrix.sum())
 
 
-try:
-    # Function call is simplified (fewer arguments needed)
-    is_feasible, total_cost = feasibility_cost(zrs_alloc_array, arrays)
+def main() -> None:
+    # Get the basic user input. Parsing errors from get_user_input() now
+    # arrive as a raised ValueError instead of the function calling exit()
+    # itself -- main() is the only place that decides to log-and-exit.
+    try:
+        user_cost, user_supply, user_demand = get_user_input()
+    except ValueError as exc:
+        logger.error("\n❌ Error: %s", exc)
+        exit(1)
 
-    logger.info("Basic solution is feasible:%s", is_feasible)
-    logger.info("North West Corner Method total allocation cost:%s", total_cost)
+    # Bundle the user input into the first structure for future usage
+    entries = RawInput(cost=user_cost, supply=user_supply, demand=user_demand)
 
-except ValueError as e:
-    # Gracefully handle the degeneracy error raised by the function
-    logger.error(f"\n🛑 Error: {e}")
+    try:
+        assertions(entries)
+    except ValueError as exc:
+        logger.error("\n🛑 Validation Error: %s", exc)
+        exit(1)
+
+    arrays = ComputationalData(cost_array=np.array(entries.cost),
+                                supply_array=np.array(entries.supply),
+                                demand_array=np.array(entries.demand))
+
+    # The core function call
+    zrs_alloc_array = allocNW(arrays)
+
+    logger.info("\n### Allocation Results ###")
+    logger.info("Alloc matrix (Decision Variables) with NWCM:\n%s", zrs_alloc_array)
+
+    logger.info("\n### Final Cost and Feasibility Check ###")
+
+    # Check total quantity matches
+    sum_z = sum_check(zrs_alloc_array)
+    logger.info("Sum of allocated quantities checks the total supply/demand:%s", sum_z == sum(arrays.supply_array))
+
+    try:
+        is_feasible, total_cost = feasibility_cost(zrs_alloc_array, arrays)
+
+        logger.info("Basic solution is feasible:%s", is_feasible)
+        logger.info("North West Corner Method total allocation cost:%s", total_cost)
+
+    except ValueError as exc:
+        # Gracefully handle the degeneracy error raised by the function
+        logger.error("\n🛑 Error: %s", exc)
+
+
+if __name__ == "__main__":
+    main()
