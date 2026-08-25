@@ -11,13 +11,39 @@ is broken by choosing the greatest amount possible to allocate. Otherwise the
 allocation goes on min unit cost got by rows analysis.
 """
 
+from __future__ import annotations
+
 import numpy as np
-from typing import List, Tuple, Any
-import ast # Required for safe string evaluation
+from typing import List, Tuple, NamedTuple
+import ast  # Required for safe string evaluation
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,  # switch to logging.INFO to silence the .debug() calls
+    format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+def parse_matrix_literal(raw: str) -> List[List[int]]:
+    """
+    Parse a cost-matrix string as a single Python literal.
+
+    Accepts any nesting style ast.literal_eval understands -- rows as
+    tuples or lists, with or without an outer wrapper, with or without
+    spaces -- rather than guessing the structure via string replacement.
+    A single bare row (e.g. "(1, 2, 3)") is normalized into a one-row
+    matrix so the return shape is always List[List[int]].
+    """
+    parsed = ast.literal_eval(raw.strip())
+
+    if parsed and not isinstance(parsed[0], (list, tuple)):
+        parsed = (parsed,)
+
+    return [list(row) for row in parsed]
 
 
 # +++++ USER INTERFACE AND INPUT HANDLING SECTION +++++
-
 
 def get_user_input() -> tuple[List[List[int]], List[int], List[int]]:
     """
@@ -45,97 +71,121 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
         # --- Safe Parsing using ast.literal_eval ---
         # This safely evaluates a string containing a Python literal structure (list/tuple).
 
-        # Parsing Supply and Demand lists
-        s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
-        d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
-        # Parsing Cost Matrix (handling multiple rows/tuples)
-        c_lst: List[List[int]] = []
-        # Normalizing input: replace outer brackets/parentheses, then split by row separator
-        c_rows_str = c_str.strip().strip('[]()')
-        
-        # Determine the row delimiter based on common matrix input styles
-        # If it's a list of lists, split by the comma outside of inner lists/tuples
-        if any(char in c_rows_str for char in ['[', '(']):
-             # If input is like (1, 2), (3, 4) - we split by '), ('
-             c_rows_str = c_rows_str.replace('], [', ')|(').replace('), (', ')|(') 
-             row_list = c_rows_str.split('|')
+        # Parsing Supply and Demand lists.
+        # Evaluate once, then check isinstance against BOTH list and tuple --
+        # the input format we advertise above accepts either, e.g. (10, 15)
+        # or [10, 15], and ast.literal_eval returns a `list` for the bracket
+        # form, not a `tuple`, so checking only `== tuple` silently mishandles
+        # the bracket form (it gets wrapped as a single-element list instead
+        # of unpacked).
+        parsed_supply = ast.literal_eval(s_str.strip())
+        if isinstance(parsed_supply, (list, tuple)):
+            s_lst: List[int] = list(parsed_supply)
         else:
-             # Assuming input is comma-separated tuples like: (1, 2, 3), (4, 5, 6)
-             # The original example implies splitting by a comma followed by a space. 
-             # We will try to parse each row separately.
-             row_list = c_rows_str.split('), ') # A simple heuristic for specific format
+            s_lst = [parsed_supply]
 
-        # Final list comprehension for parsing each row
-        for r_str in row_list:
-            # Clean up residual characters and evaluate
-            cleaned_r_str = r_str.strip(' )([]')
-            # If the string is empty after cleaning, skip (e.g., from extra commas)
-            if not cleaned_r_str:
-                continue
-            
-            # Reconstruct the tuple/list structure before evaluation for safety/compatibility
-        
-            evaluated_row = ast.literal_eval(f"({cleaned_r_str})") 
-            if type(evaluated_row) == tuple:
-                c_lst.append(list(evaluated_row))
-            else:
-                c_lst.append([evaluated_row])
-        
+        parsed_demand = ast.literal_eval(d_str.strip())
+        if isinstance(parsed_demand, (list, tuple)):
+            d_lst: List[int] = list(parsed_demand)
+        else:
+            d_lst = [parsed_demand]
+
+        # Parsing Cost Matrix. Delegated to parse_matrix_literal() -- see
+        # its docstring -- instead of manually splitting/replacing on
+        # bracket characters, which only matched a couple of anticipated
+        # spacing/punctuation patterns.
+        c_lst = parse_matrix_literal(c_str)
+
         return c_lst, s_lst, d_lst
 
-    except ValueError as e:
-        print(f"\n❌ Error: Failed to parse input. Please check your formatting.")
-        print(f"Details: {e}")
-        exit(1)
-    except SyntaxError:
-        print(f"\n❌ Error: Input format is invalid. Ensure you use proper list/tuple syntax (e.g., (10, 15) or [10, 15]).")
-        exit(1)
+    except ValueError as exc:
+        # Don't log or exit() here -- this function's job is to report the
+        # problem, not decide the program's fate. Raise it and let the
+        # caller (main(), at the bottom of the script) decide whether to
+        # log, retry, or exit.
+        raise ValueError(f"Failed to parse input. Please check your formatting. Details: {exc}") from exc
+    except SyntaxError as exc:
+        raise ValueError(
+            "Input format is invalid. Ensure you use proper list/tuple syntax "
+            "(e.g., (10, 15) or [10, 15])."
+        ) from exc
 
 
 # --- Execution Start ---
 
-c_lst, s_lst, d_lst = get_user_input()
-# c_lst = [[1054, 1840, 2867, 4271], [1824, 2705, 3604, 4857], [1494, 2484, 2788,
-#                                                               4514]]
-# s_lst = [44, 36, 105]
-# d_lst = [52, 46, 48, 39]
-
-sum_s = sum(s_lst)
-sum_d = sum(d_lst)
-
-# The assertions function remains the same, but it is called after successful parsing.
+# Create the first structure for handling user input
+class RawInput(NamedTuple):
+    cost: List[List[int]]
+    supply: List[int]
+    demand: List[int]
 
 
-def assertions(c: List[List[int]], s: List[int], d: List[int]) -> None:
-    # ... (Your original assertions function)
+# The assertions function is called after successful parsing.
+
+def assertions(entries: RawInput) -> None:
     # Using the standard type hint List instead of list for compatibility with python versions < 3.9
-    
+
     """
     Function to check the dimensional 'sanity', i.e., compatibility,
     of the cost matrix with supply and demand lists/arrays.
-    Takes as input the cost matrix, supply and demand arrays.
+    Takes as input the cost matrix, supply and demand arrays from the
+    first structure.
     Signals problems and aborts execution.
     """
-    if len(c) != len(s):
-        raise ValueError(f"Dimensional error: Cost matrix has {len(c)} rows, but Supply list has {len(s)} elements.")
-    if len(c[0]) != len(d):
-        raise ValueError(f"Dimensional error: Cost matrix has {len(c[0])} columns, but Demand list has {len(d)} elements.")
-    if sum(s) != sum(d):
-        raise ValueError(f"Transportation problem is **unbalanced**: Sum of Supply ({sum(s)}) != Sum of Demand ({sum(d)}).")
+    if len(entries.cost) != len(entries.supply):
+        raise ValueError(f"Dimensional error: Cost matrix has \
+                        {len(entries.cost)} rows, but Supply list has \
+                        {len(entries.supply)} elements.")
+
+    # Check that every row has the same length. The next check below only
+    # looks at entries.cost[0] as a stand-in for "the matrix's column
+    # count" -- that's only valid once we know the matrix is rectangular,
+    # so this has to run first. Without it, a ragged matrix like
+    # [[1, 2, 3], [4, 5]] passes every other check here (row count matches
+    # supply, row 0's length matches demand, sums balance) and only fails
+    # later, deep inside np.array(), with a raw numpy traceback instead of
+    # a clean validation message.
+    row_lengths = [len(row) for row in entries.cost]
+    if len(set(row_lengths)) != 1:
+        raise ValueError(f"Dimensional error: Cost matrix rows have \
+                        inconsistent lengths {row_lengths}. \
+                        Every row must have the same number of columns.")
+
+    if len(entries.cost[0]) != len(entries.demand):
+        raise ValueError(f"Dimensional error: Cost matrix has \
+        {len(entries.cost[0])} columns, but Demand list has \
+        {len(entries.demand)} elements.")
+
+    if sum(entries.supply) != sum(entries.demand):
+        raise ValueError(f"Transportation problem is **unbalanced**: \
+                Sum of Supply \
+                ({sum(entries.supply)}) != Sum of Demand \
+                ({sum(entries.demand)}).")
 
 
-try:
-    assertions(c_lst, s_lst, d_lst)
-except ValueError as e:
-    print(f"\n🛑 Validation Error: {e}")
-    exit(1)
+# Create matrices and arrays for working data
+# Bundle the computational arrays into a second structure
 
-# create matrices and arrays for working data
-c_array = np.array(c_lst)
-s_array = np.array(s_lst)
-d_array = np.array(d_lst)
-# More Pythonic way to create the zero array
-# zrs_array = np.zeros_like(c_array, dtype=int) 
+class ComputationalData(NamedTuple):
+    cost_array: np.ndarray
+    supply_array: np.ndarray
+    demand_array: np.ndarray
+
+
+# Bundle per-dimension allocation candidate: the chosen cell (row, col),
+# the minimum unit cost available on the max-delta row/col, and the overall
+# max delta for that dimension (used to compare rows vs cols).
+
+class AllocCandidate(NamedTuple):
+    row: int
+    col: int
+    min_unit_cost: int
+    delta: int
+
+
+# Sentinel returned when no valid candidate could be determined for a dimension
+# (e.g. all unit costs in that dimension are already blocked).
+_INVALID_CANDIDATE = AllocCandidate(row=-2, col=-2, min_unit_cost=-2, delta=-2)
 
 
 def select_diff(uc_array: np.ndarray) -> int:
@@ -145,15 +195,15 @@ def select_diff(uc_array: np.ndarray) -> int:
     Returns the difference between the two Least Positive Unit Costs.
     """
 
-    #1. Ensure unit cost array copy for unwanted side effects
+    # 1. Ensure unit cost array copy for unwanted side effects
     uc_cp = uc_array.copy()
 
     # 2. Extract the difference between two of the least unit costs
     # 2.a. Extract true (not zeroed out by previous allocs) unit cost list
     diffs: list[int] = [l_uc for l_uc in np.sort(uc_cp) if l_uc > -1]
-    if len(diffs) > 1: #there are at least two positive least unit costs
+    if len(diffs) > 1:  # there are at least two positive least unit costs
         diff: int = diffs[1] - diffs[0]
-    if len(diffs) == 1: # only one positive unit cost
+    if len(diffs) == 1:  # only one positive unit cost
         diff = -1
     if len(diffs) == 0:  # no positive unit cost
         diff = -2
@@ -161,97 +211,83 @@ def select_diff(uc_array: np.ndarray) -> int:
     return diff
 
 
-def get_uc_min(ddiffs: dict, c_cp: np.ndarray) -> tuple:
+def get_uc_min(ddiffs: dict[int, int], c_cp: np.ndarray) -> tuple[int, int, int]:
     """
     Selects the minimum Unit Cost index out of deltas dict.
 
     Returns the index of the value of minimum unit cost
     on max delta row/col.
     """
-    
-    import numpy as np
 
     max_delta: int = max(ddiffs.values())
     # get the index of row/col of max_delta
     max_ind: list[int] = [k for k, v in ddiffs.items() if v == max_delta]
-    # print('\n')
-    # print(f"max_delta {max_delta}")
-    # print(f"max_ind {max_ind}")
-    
+
     store_ind: list[int] = []
     store_uc_min: list[int] = []
     for ind in max_ind:  # for each max_delta row/col
         # get available unit cost list on max_delta row/col
         w_lst: list[int] = [uc for uc in c_cp[ind] if uc > -1]
-        # print(f"w_lst {w_lst}")
         store_ind.append(ind)
         store_uc_min.append(min(w_lst))  # append the min uc available
-    
-    # print(f"store_ind {store_ind}")
-    # print(f"store_uc_min {store_uc_min}")
+
     ind_uc_min: int = store_uc_min.index(min(store_uc_min))
-    # print(f"ind_uc_min {ind_uc_min}")
-    # print(f"c_cp[store_ind[ind_uc_min]]: {c_cp[store_ind[ind_uc_min]]}")
-    # print(f"c_cp[store_ind[ind_uc_min]]: {type(c_cp[store_ind[ind_uc_min]])}")
     true_uc: list[int] = [x for x in list(c_cp[store_ind[ind_uc_min]]) if x >
                           -1]
     j: int = list(c_cp[store_ind[ind_uc_min]]).index(min(true_uc))
-    # print(f"j: {j}")
-    # print('\n')
-        
+
     return (store_ind[ind_uc_min], j, store_uc_min[ind_uc_min])
 
 
-def detect_false_delta(delta_ind: int, uc_array: np.ndarray) -> tuple:
+def detect_false_delta(delta_ind: int, uc_array: np.ndarray) -> tuple[int, int, int]:
     """
-    Detects wheter a row/col has only one true unit cost (uc).
+    Detects whether a row/col has only one true unit cost (uc).
 
     Returns the position and value of the only true unit cost
     (if it's the case) as a tuple (i, j, val) or (-2, -2, -2) if there are
     more or less than one true unit costs on row/col.
     """
-    
+
     # 1. Extract a list with negative unit cost
     neg_uc: list[int] = [uc for uc in uc_array if uc == -1]
-    # print(f"neg_uc: {neg_uc}")
-    
-    # 2. Compare lenghts of passed array and extracted list
+
+    # 2. Compare lengths of passed array and extracted list
     uc_list: list[int] = list(uc_array)
     uc_ind: int = uc_list.index(max(uc_list))
     if (len(uc_array) - len(neg_uc)) == 1:  # precisely one true uc
         return (delta_ind, uc_ind, max(uc_list))
     else:
         return (-2, -2, -2)
-    
-def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
-            c_array: np.ndarray) -> np.ndarray:
+
+
+def alloc_vam(arrays: ComputationalData) -> np.ndarray:
     """
     Determines a Basic Feasible Solution (BFS) using the Vogel Alloc Method.
 
-    Takes as inputs the supply, demand, and unit cost arrays.
-    
+    Takes as input the ComputationalData structure (supply, demand, unit cost arrays).
+
     Returns the allocation matrix (decision variables).
     """
     # 1. Ensure Copies for Side-Effect-Free Operation
-    s_cp = s_array.copy()  # Working copy of Supply
-    d_cp = d_array.copy()  # Working copy of Demand
-    c_cp = c_array.copy()  # Working copy of Cost matrix (to 'inf' out satisfied rows/cols)
-    
+    s_cp = arrays.supply_array.copy()   # Working copy of Supply
+    d_cp = arrays.demand_array.copy()   # Working copy of Demand
+    c_cp = arrays.cost_array.copy()     # Working copy of Cost matrix (to '-1' out satisfied rows/cols)
+
     # Initialize the Allocation matrix (X_ij)
     # Using np.zeros_like is cleaner and more NumPy idiomatic
-    allocation_matrix = np.zeros_like(c_array, dtype=int)
-    
+    allocation_matrix = np.zeros_like(arrays.cost_array, dtype=int)
+
     # A unit cost equal to -1 to effectively block satisfied sources/destinations
-    BLOCK_COST = -1 
-    
+    BLOCK_COST = -1
+
     # Core loop continues until all supply is exhausted (which means demand is also zero,
     # due to the balancing assertion)
-    
+
     t = 0  # set a counter for main loop
 
     while np.sum(s_cp) > 0:
-        
-        # 2. Call the speciliazed function to extract the difference between
+
+        # 2. Call the specialized function to extract the difference between
         #    the least and next-to-the-least unit costs on rows and columns of
         #    the Unit Cost Matrix (UCM).
         #    Store the least unit cost on row/column pair indexes
@@ -260,201 +296,176 @@ def alloc_vam(s_array: np.ndarray, d_array: np.ndarray,
         #    deltas (i.e., on rows and cols), being possible to have the same
         #    pair of indices (i, j) (the dict keys) where the Least Cost Unit
         #    is located, on rows and cols.
- 
-        ddiffs_r = {}    #dict to store {r: diff} on rows
-        for r in range(len(c_cp)):    #iterate over rows of UCM
-            #print("row, ", c_cp[r])
+
+        ddiffs_r = {}    # dict to store {r: diff} on rows
+        for r in range(len(c_cp)):    # iterate over rows of UCM
             diff = select_diff(c_cp[r])
-            #print("diffR, ", diff)
             ddiffs_r[r] = diff
-        # print("Diffs dict after rows, ", ddiffs_r)
 
-        ddiffs_c = {}    #dict to store {c: diff} on cols
-        for c in range(len(c_cp.T)):    #iterate over columns of UCM
-            #print("col, ", c_cp.T[c])
+        ddiffs_c = {}    # dict to store {c: diff} on cols
+        for c in range(len(c_cp.T)):    # iterate over columns of UCM
             diff = select_diff(c_cp.T[c])
-            #print("diffC, ", diff)
             ddiffs_c[c] = diff
-        # print("Diffs dict after cols, ", ddiffs_c)
- 
-        # 3. Handle Ties and Allocation.The differentiation is either on
-        #    equal max deltas or equal min unit costs
-        # 3.a. Get the indexes of min unit cost on max_delta rows/cols
-        #      by calling get_uc_min or detect_false_delta func
-        uc_r0: int = np.max(c_cp) + 1  # set the uc_r initial value
-        is_fake_delta_r: bool = -1 in list(ddiffs_r.values())
-        # print(f"is_fake_delta_r: {is_fake_delta_r}")
-        
-        # check if uc are negative on rows
-        is_uc_r_neg = True
-        for delta in ddiffs_r.values():
-            if delta > -2:
-                is_uc_r_neg = False
 
-        # print(f"is_uc_r_neg: {is_uc_r_neg}")
+        # 3. Handle Ties and Allocation. The differentiation is either on
+        #    equal max deltas or equal min unit costs.
+        # 3.a. Determine the AllocCandidate for the row perspective.
+        #      detect_false_delta() is called first for rows that have only one
+        #      remaining unit cost (delta == -1); get_uc_min() handles all other cases.
+        #      Note on index semantics:
+        #        detect_false_delta(k, c_cp[k])   -> returns (row, col, uc)
+        #        get_uc_min(ddiffs_r, c_cp)        -> returns (row, col, uc)
 
+        is_uc_r_neg: bool = all(d <= -2 for d in ddiffs_r.values())
+        is_fake_delta_r: bool = -1 in ddiffs_r.values()
+
+        row_pick: AllocCandidate = _INVALID_CANDIDATE
         if not is_uc_r_neg:
+            uc_r0: int = int(np.max(c_cp)) + 1  # running best uc for false-delta scan
             if is_fake_delta_r:
-                for k,v in ddiffs_r.items():
-                    if v == -1:  # suspect row here ...
-                        i_r, j_r, uc_r = detect_false_delta(k, c_cp[k])
+                for k, v in ddiffs_r.items():
+                    if v == -1:  # suspect row: only one remaining unit cost
+                        fd_row, fd_col, uc_r = detect_false_delta(k, c_cp[k])
                         if uc_r <= uc_r0:
                             uc_r0 = uc_r
-                            i:int = i_r
-                            j:int = j_r
-              
-                            # print(f"i_(-1r): {i}")
-                            # print(f"j_(-1r): {j}")
+                            row_pick = AllocCandidate(
+                                row=fd_row, col=fd_col,
+                                min_unit_cost=uc_r,
+                                delta=max(ddiffs_r.values()),
+                            )
+                            logger.debug("row_pick from false delta: %s", row_pick)
 
-            if is_fake_delta_r and i_r == -2:  # no tricky delta
-                i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
+            if is_fake_delta_r and row_pick is _INVALID_CANDIDATE:  # no valid false delta
+                row, col, uc_min = get_uc_min(ddiffs_r, c_cp)
+                row_pick = AllocCandidate(
+                    row=row, col=col,
+                    min_unit_cost=uc_min,
+                    delta=max(ddiffs_r.values()),
+                )
 
             if not is_fake_delta_r:  # no suspect delta row encountered
-                i_r,j_r, uc_min_r = get_uc_min(ddiffs_r, c_cp)
+                row, col, uc_min = get_uc_min(ddiffs_r, c_cp)
+                row_pick = AllocCandidate(
+                    row=row, col=col,
+                    min_unit_cost=uc_min,
+                    delta=max(ddiffs_r.values()),
+                )
 
-        # print(f"i_r {i_r}")
-        # print(f"j_r {j_r}")
-        # print(f"uc_min_r: {uc_min_r}")
-        
-        # check if uc are negative on cols
-        is_uc_c_neg = True
-        for delta in ddiffs_c.values():
-            if delta > -2:
-                is_uc_c_neg = False
+        logger.debug("row_pick: %s", row_pick)
 
-        # print(f"is_uc_c_neg: {is_uc_c_neg}")
+        # 3.b. Determine the AllocCandidate for the column perspective.
+        #      Note on index semantics (transposed matrix means indices are flipped):
+        #        detect_false_delta(k, c_cp.T[k]) -> returns (col, row, uc)
+        #        get_uc_min(ddiffs_c, c_cp.T)      -> returns (col, row, uc)
+        #      In both cases the first element is the column index and the
+        #      second is the row index, so we assign them accordingly when
+        #      constructing AllocCandidate(row=..., col=...).
 
-        uc_c0: int = np.max(c_cp) + 1  # set the uc_c initial value
-        # print(f"uc_c0: {uc_c0}")
-        is_fake_delta_c: bool = -1 in list(ddiffs_c.values())
-        # print(f"is_fake_delta_c: {is_fake_delta_c}")
+        is_uc_c_neg: bool = all(d <= -2 for d in ddiffs_c.values())
+        is_fake_delta_c: bool = -1 in ddiffs_c.values()
 
-        
-        if is_uc_c_neg == False:
+        col_pick: AllocCandidate = _INVALID_CANDIDATE
+        if not is_uc_c_neg:
+            uc_c0: int = int(np.max(c_cp)) + 1  # running best uc for false-delta scan
             if is_fake_delta_c:
-                for k,v in ddiffs_c.items():
-                    if v == -1:  # suspect col here ...
-                        i_c, j_c, uc_c = detect_false_delta(k, c_cp.T[k])
+                for k, v in ddiffs_c.items():
+                    if v == -1:  # suspect col: only one remaining unit cost
+                        fd_col, fd_row, uc_c = detect_false_delta(k, c_cp.T[k])
                         if uc_c <= uc_c0:
                             uc_c0 = uc_c
-                            j = i_c
-                            i = j_c
-              
-                            # print(f"i_(-1c): {i}")
-                            # print(f"j_(-1c): {j}")
+                            col_pick = AllocCandidate(
+                                row=fd_row, col=fd_col,
+                                min_unit_cost=uc_c,
+                                delta=max(ddiffs_c.values()),
+                            )
+                            logger.debug("col_pick from false delta: %s", col_pick)
 
-            if is_fake_delta_c and i_c == -2:  # no tricky delta
-                j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
+            if is_fake_delta_c and col_pick is _INVALID_CANDIDATE:  # no valid false delta
+                col, row, uc_min = get_uc_min(ddiffs_c, c_cp.T)
+                col_pick = AllocCandidate(
+                    row=row, col=col,
+                    min_unit_cost=uc_min,
+                    delta=max(ddiffs_c.values()),
+                )
 
             if not is_fake_delta_c:  # no suspect delta col encountered
-                j_c, i_c, uc_min_c = get_uc_min(ddiffs_c, c_cp.T)
-                
-        # print(f"i_c {i_c}")
-        # print(f"j_c {j_c}")
-        # print(f"uc_min_c: {uc_min_c}")
-        
-        # 3.b. Select where to allocate based on deltas and min unit cost
-        max_delta_row: int = max(ddiffs_r.values())
-        max_delta_col: int = max(ddiffs_c.values())
+                col, row, uc_min = get_uc_min(ddiffs_c, c_cp.T)
+                col_pick = AllocCandidate(
+                    row=row, col=col,
+                    min_unit_cost=uc_min,
+                    delta=max(ddiffs_c.values()),
+                )
 
-        # if ((not is_fake_delta_r or i_r == -2) and
-        #     (not is_fake_delta_c or i_c) == -2):
-        #     # delta on rows is greater than the one on cols 
-        if max_delta_row > max_delta_col:
-            i = i_r
-            j = j_r
-        # delta on cols is greater than the one on rows
-        if max_delta_col > max_delta_row:
-            i = i_c
-            j = j_c
-        # deltas are equal
-        if max_delta_row == max_delta_col:
-            if uc_min_c > uc_min_r:
-                i = i_r
-                j = j_r
-            if uc_min_r > uc_min_c:
-                i = i_c
-                j = j_c
-            if uc_min_r == uc_min_c:
-                # if at equal ucs quantity on rows is >= cols
-                if (np.min(s_cp[i_r], d_cp[j_r]) >= np.min(s_cp[i_c],
-                                                           d_cp[j_c])):
-                    i = i_r
-                    j = j_r
-                else:  # greater on cols
-                    i = i_c
-                    j - j_c
+        logger.debug("col_pick: %s", col_pick)
 
-        print(f"i: {i}")
-        print(f"j: {j}")
-           
-        allocated_in_cycle = False    #safety for while loop ...
-       
-        # 4. Allocate 
-        # 4.a. Get the alloc quantity
-        allocation_quantity = min(s_cp[i], d_cp[j])
-        allocation_matrix[i, j] = allocation_quantity
-        print(f"alloc_quantity: {allocation_quantity}")
-        # Update remaining supply and demand
-        s_cp[i] -= allocation_quantity
-        d_cp[j] -= allocation_quantity
-            
-        # --- Block Satisfied Rows/Columns (Setting cost to a high value) ---
-            
-        # If the supply source 'i' is exhausted, block the entire row
-        if s_cp[i] == 0:
-            c_cp[i, :] = BLOCK_COST
-            
-        # If the demand destination 'j_pref' is satisfied, block the entire column
-        if d_cp[j] == 0:
-            c_cp[:, j] = BLOCK_COST
-            
-        allocated_in_cycle = True
-
-        # print(f"alloc_matrix: {allocation_matrix}")
-
-        # print(f"c_cp: {c_cp}")
-                
-        t += 1
-        print(f"iteration is: {t}")
-        print('\n')
-
-        #if t == 8:
-        #    break
-        
+        # Break early when all unit costs in both dimensions are blocked.
         if is_uc_r_neg and is_uc_c_neg:
             break
 
-        continue # resume while loop     
-        
-        if not allocated_in_cycle and np.sum(s_cp) > 0:
-             # If we couldn't allocate anything despite remaining supply/demand, 
-             # something is fundamentally wrong (e.g., all remaining costs were blocked).
-             # For a professional script, you might raise an error here.
-             print("Warning: Allocation loop stuck. Check data.")
-             break
-        
+        # 3.c. Select the preferred candidate based on deltas and min unit cost.
+        #      row_pick.delta / col_pick.delta hold the max delta for each dimension,
+        #      so a direct comparison drives the tiebreak cascade correctly.
+        chosen: AllocCandidate
+        if row_pick.delta > col_pick.delta:
+            chosen = row_pick
+        elif col_pick.delta > row_pick.delta:
+            chosen = col_pick
+        else:  # equal deltas: fall back to min unit cost
+            if col_pick.min_unit_cost > row_pick.min_unit_cost:
+                chosen = row_pick
+            elif row_pick.min_unit_cost > col_pick.min_unit_cost:
+                chosen = col_pick
+            else:  # equal min unit costs: prefer the greater allocatable quantity
+                qty_r = min(s_cp[row_pick.row], d_cp[row_pick.col])
+                qty_c = min(s_cp[col_pick.row], d_cp[col_pick.col])
+                chosen = row_pick if qty_r >= qty_c else col_pick
+
+        logger.debug("chosen: %s", chosen)
+
+        # 4. Allocate to the chosen cell.
+        allocation_quantity = min(s_cp[chosen.row], d_cp[chosen.col])
+        allocation_matrix[chosen.row, chosen.col] = allocation_quantity
+        logger.debug("alloc_quantity: %s", allocation_quantity)
+        # Update remaining supply and demand
+        s_cp[chosen.row] -= allocation_quantity
+        d_cp[chosen.col] -= allocation_quantity
+
+        # --- Block Satisfied Rows/Columns (Setting cost to BLOCK_COST) ---
+
+        # If the supply source is exhausted, block the entire row
+        if s_cp[chosen.row] == 0:
+            c_cp[chosen.row, :] = BLOCK_COST
+
+        # If the demand destination is satisfied, block the entire column
+        if d_cp[chosen.col] == 0:
+            c_cp[:, chosen.col] = BLOCK_COST
+
+        logger.debug("alloc_matrix:\n%s", allocation_matrix)
+        logger.debug("c_cp:\n%s", c_cp)
+
+        t += 1
+        logger.debug("iteration is: %s\n", t)
+
+        # Safety: guard against an infinite loop if blocking logic has a gap.
+        if allocation_quantity == 0 and np.sum(s_cp) > 0:
+            logger.warning("Warning: Allocation loop stuck. Check data.")
+            break
+
     return allocation_matrix
 
-# Allocation function call
-zrs_alloc_array = alloc_vam(s_array, d_array, c_array)
-
-print("\n### Allocation Results ###")
-print("Alloc matrix (Decision Variables) with NWCM:") 
-print(zrs_alloc_array)
 
 # ... (rest of the script follows: sum_check, feasibility_cost) ...
-def feasibility_cost(allocation_matrix: np.ndarray, cost_matrix: np.ndarray) -> Tuple[bool, int]:
+def feasibility_cost(allocation_matrix: np.ndarray, arrays: ComputationalData) -> Tuple[bool, int]:
     """
     Checks for non-degenerate Basic Feasible Solution (BFS) and computes the total cost.
 
-    A BFS is non-degenerate if the number of basic (allocated) variables 
-    is equal to m + n - 1, where m is the number of rows (supply sources) 
+    A BFS is non-degenerate if the number of basic (allocated) variables
+    is equal to m + n - 1, where m is the number of rows (supply sources)
     and n is the number of columns (demand destinations).
 
     Args:
         allocation_matrix (np.ndarray): The matrix of decision variables (X_ij).
-        cost_matrix (np.ndarray): The matrix of unit costs (C_ij).
+        arrays (ComputationalData): The structure containing the unit cost array (C_ij).
 
     Returns:
         Tuple[bool, int]: A tuple containing (is_feasible_bfs, total_cost).
@@ -462,27 +473,27 @@ def feasibility_cost(allocation_matrix: np.ndarray, cost_matrix: np.ndarray) -> 
     Raises:
         ValueError: If the basic solution is degenerate.
     """
-    
+
     # 1. Calculate Total Cost (using NumPy for efficiency)
-    # The element-wise multiplication of allocation * cost gives the total cost 
+    # The element-wise multiplication of allocation * cost gives the total cost
     # for each cell, and then we sum the entire matrix.
-    total_cost = np.sum(allocation_matrix * cost_matrix)
-    
+    total_cost = int(np.sum(allocation_matrix * arrays.cost_array))
+
     # 2. Check Feasibility (Non-Degeneracy)
     # The shape gives us the dimensions: (m, n) -> (rows, columns)
     m, n = allocation_matrix.shape
-    
+
     # Count the number of positive allocations (basic variables)
     num_basic_variables = np.count_nonzero(allocation_matrix)
-    
+
     # Feasibility check: must have exactly m + n - 1 basic variables
     required_basic_vars = m + n - 1
-    
+
     is_feasible_bfs = num_basic_variables == required_basic_vars
-    
+
     # 3. Handle Degeneracy (Raise Exception)
     if not is_feasible_bfs:
-        # Instead of printing and exiting, we raise an exception. 
+        # Instead of printing and exiting, we raise an exception.
         # The main script can catch this and handle the termination or logging.
         raise ValueError(
             f"The basic solution is degenerate. Required basic variables: {required_basic_vars}. "
@@ -502,29 +513,60 @@ def sum_check(allocation_matrix: np.ndarray) -> int:
     """
     Function to check whether the sum of allocated quantities matches the total supply/demand.
     """
-    # Use NumPy's built-in sum() for a direct, efficient calculation
-    return allocation_matrix.sum()
+    # Use NumPy's built-in sum() for a direct, efficient calculation.
+    # Wrapped in int() -- ndarray.sum() is typed to return Any by numpy's
+    # stubs, so without this mypy --strict flags an implicit Any leaking
+    # out of a function declared to return int.
+    return int(allocation_matrix.sum())
 
-# ... (Previous code: c_array, s_array, d_array, zrs_alloc_array defined) ...
 
 # Final output section uses a try/except block to catch the new ValueError
 
-print("\n### Final Cost and Feasibility Check ###")
+def main() -> None:
+    # Get the basic user input. Parsing errors from get_user_input() now
+    # arrive as a raised ValueError instead of the function calling exit()
+    # itself -- main() is the only place that decides to log-and-exit.
+    try:
+        user_cost, user_supply, user_demand = get_user_input()
+    except ValueError as exc:
+        logger.error("\n❌ Error: %s", exc)
+        exit(1)
 
-# Check total quantity matches
-sum_z = sum_check(zrs_alloc_array)
-print("Sum of allocated quantities checks the total supply/demand:", sum_z == sum(s_array))
+    # Bundle the user input into the first structure for future usage
+    entries = RawInput(cost=user_cost, supply=user_supply, demand=user_demand)
+
+    try:
+        assertions(entries)
+    except ValueError as exc:
+        logger.error("\n🛑 Validation Error: %s", exc)
+        exit(1)
+
+    arrays = ComputationalData(cost_array=np.array(entries.cost),
+                               supply_array=np.array(entries.supply),
+                               demand_array=np.array(entries.demand))
+
+    # The core function call
+    zrs_alloc_array = alloc_vam(arrays)
+
+    logger.info("\n### Allocation Results ###")
+    logger.info("Alloc matrix (Decision Variables) with VAM:\n%s", zrs_alloc_array)
+
+    logger.info("\n### Final Cost and Feasibility Check ###")
+
+    # Check total quantity matches
+    sum_z = sum_check(zrs_alloc_array)
+    logger.info("Sum of allocated quantities checks the total supply/demand:%s", sum_z == sum(arrays.supply_array))
+
+    try:
+        is_feasible, total_cost = feasibility_cost(zrs_alloc_array, arrays)
+
+        logger.info("Basic solution is feasible:%s", is_feasible)
+        logger.info("Vogel Allocation Method total allocation cost:%s", total_cost)
+
+    except ValueError as exc:
+        # Gracefully handle the degeneracy error raised by the function
+        logger.error("\n🛑 Error: %s", exc)
 
 
-try:
-    # Function call is also simplified (fewer arguments needed)
-    is_feasible, total_cost = feasibility_cost(zrs_alloc_array, c_array)
-
-    print("Basic solution is feasible:", is_feasible)
-    print(f"Vogel Allocation Method total allocation cost: {total_cost:,}")
-
-except ValueError as e:
-    # Gracefully handle the degeneracy error raised by the function
-    print(f"\n🛑 Error: {e}")
-    # You can now choose to exit, log, or prompt the user for other action here.
-    # For now, we will just print the error and let the program naturally end.
+if __name__ == "__main__":
+    main()
