@@ -1,6 +1,44 @@
+"""
+Script to determine a Basic Feasible Solution (BFS) with Least Unit Cost
+allocation method.
+It takes as inputs the cost matrix, the supply and demand lists. The length of
+supply must match the number of cost matrix rows and that of demand the
+columns, respectively.
+Returns the allocation table, whether the feasible solution is possible, i.e.,
+bool, and the allocation total cost.
+"""
+
+from __future__ import annotations
+
 import numpy as np
-from typing import List, Tuple, Any
+from typing import List, Tuple, NamedTuple
 import ast # Required for safe string evaluation
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,  # switch to logging.INFO to silence the .debug() calls
+    format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+def parse_matrix_literal(raw: str) -> List[List[int]]:
+    """
+    Parse a cost-matrix string as a single Python literal.
+
+    Accepts any nesting style ast.literal_eval understands -- rows as
+    tuples or lists, with or without an outer wrapper, with or without
+    spaces -- rather than guessing the structure via string replacement.
+    A single bare row (e.g. "(1, 2, 3)") is normalized into a one-row
+    matrix so the return shape is always List[List[int]].
+    """
+    parsed = ast.literal_eval(raw.strip())
+
+    if parsed and not isinstance(parsed[0], (list, tuple)):
+        parsed = (parsed,)
+
+    return [list(row) for row in parsed]
+
 
 # +++++ USER INTERFACE AND INPUT HANDLING SECTION +++++
 
@@ -30,100 +68,105 @@ The transportation plan must be **balanced**: sum of supplies = sum of demands.
         # --- Safe Parsing using ast.literal_eval ---
         # This safely evaluates a string containing a Python literal structure (list/tuple).
 
-        # Parsing Supply and Demand lists
-        if type(ast.literal_eval(s_str.strip())) == tuple:
-            s_lst: List[int] = list(ast.literal_eval(s_str.strip()))
+        # Parsing Supply and Demand lists.
+        # Evaluate once, then check isinstance against BOTH list and tuple --
+        # the input format we advertise above accepts either, e.g. (10, 15)
+        # or [10, 15], and ast.literal_eval returns a `list` for the bracket
+        # form, not a `tuple`, so checking only `== tuple` silently mishandles
+        # the bracket form (it gets wrapped as a single-element list instead
+        # of unpacked).
+        parsed_supply = ast.literal_eval(s_str.strip())
+        if isinstance(parsed_supply, (list, tuple)):
+            s_lst: List[int] = list(parsed_supply)
         else:
-            s_lst = [ast.literal_eval(s_str.strip())]
+            s_lst = [parsed_supply]
 
-        if type(ast.literal_eval(d_str.strip())) == tuple:
-            d_lst: List[int] = list(ast.literal_eval(d_str.strip()))
-
+        parsed_demand = ast.literal_eval(d_str.strip())
+        if isinstance(parsed_demand, (list, tuple)):
+            d_lst: List[int] = list(parsed_demand)
         else:
-            d_lst = [ast.literal_eval(d_str.strip())]
+            d_lst = [parsed_demand]
 
-        # Parsing Cost Matrix (handling multiple rows/tuples)
-        c_lst: List[List[int]] = []
-        # Normalizing input: replace outer brackets/parentheses, then split by row separator
-        c_rows_str = c_str.strip().strip('[]()')
-        
-        # Determine the row delimiter based on common matrix input styles
-        # If it's a list of lists, split by the comma outside of inner lists/tuples
-        if any(char in c_rows_str for char in ['[', '(']):
-             # If input is like (1, 2), (3, 4) - we split by '), ('
-             c_rows_str = c_rows_str.replace('], [', ')|(').replace('), (', ')|(') 
-             row_list = c_rows_str.split('|')
-        else:
-             # Assuming input is comma-separated tuples like: (1, 2, 3), (4, 5, 6)
-             # The original example implies splitting by a comma followed by a space. 
-             # We will try to parse each row separately.
-             row_list = c_rows_str.split('), ') # A simple heuristic for specific format
+        # Parsing Cost Matrix. Delegated to parse_matrix_literal() -- see
+        # its docstring -- instead of manually splitting/replacing on
+        # bracket characters, which only matched a couple of anticipated
+        # spacing/punctuation patterns.
+        c_lst = parse_matrix_literal(c_str)
 
-        # Final list comprehension for parsing each row
-        for r_str in row_list:
-            # Clean up residual characters and evaluate
-            cleaned_r_str = r_str.strip(' )([]')
-            # If the string is empty after cleaning, skip (e.g., from extra commas)
-            if not cleaned_r_str:
-                continue
-            
-            # Reconstruct the tuple/list structure before evaluation for safety/compatibility
-            evaluated_row = ast.literal_eval(f"({cleaned_r_str})") 
-            if type(evaluated_row) == tuple:
-                c_lst.append(list(evaluated_row))
-            else:
-                c_lst.append([evaluated_row])
-        
         return c_lst, s_lst, d_lst
 
-    except ValueError as e:
-        print(f"\n❌ Error: Failed to parse input. Please check your formatting.")
-        print(f"Details: {e}")
-        exit(1)
-    except SyntaxError:
-        print(f"\n❌ Error: Input format is invalid. Ensure you use proper list/tuple syntax (e.g., (10, 15) or [10, 15]).")
-        exit(1)
+    except ValueError as exc:
+        # Don't log or exit() here -- this function's job is to report the
+        # problem, not decide the program's fate. Raise it and let the
+        # caller (main(), at the bottom of the script) decide whether to
+        # log, retry, or exit.
+        raise ValueError(f"Failed to parse input. Please check your formatting. Details: {exc}") from exc
+    except SyntaxError as exc:
+        raise ValueError(
+            "Input format is invalid. Ensure you use proper list/tuple syntax "
+            "(e.g., (10, 15) or [10, 15])."
+        ) from exc
 
 
 # --- Execution Start ---
 
-c_lst, s_lst, d_lst = get_user_input()
+# Create the first structure for handling user input
+class RawInput(NamedTuple):
+    cost: List[List[int]]
+    supply: List[int]
+    demand: List[int]
 
-sum_s = sum(s_lst)
-sum_d = sum(d_lst)
 
-# The assertions function remains the same, but it is called after successful parsing.
+# The assertions function it is called after successful parsing.
 
-def assertions(c: List[List[int]], s: List[int], d: List[int]) -> None:
+def assertions(entries: RawInput) -> None:
     # Using the standard type hint List instead of list for compatibility with python versions < 3.9
     
     """
     Function to check the dimensional 'sanity', i.e., compatibility,
     of the cost matrix with supply and demand lists/arrays.
-    Takes as input the cost matrix, supply and demand arrays.
+    Takes as input the cost matrix, supply and demand arrays from the
+    first structure.
     Signals problems and aborts execution.
     """
-    if len(c) != len(s):
-        raise ValueError(f"Dimensional error: Cost matrix has {len(c)} rows, but Supply list has {len(s)} elements.")
-    if len(c[0]) != len(d):
-        raise ValueError(f"Dimensional error: Cost matrix has {len(c[0])} columns, but Demand list has {len(d)} elements.")
-    if sum(s) != sum(d):
-        raise ValueError(f"Transportation problem is **unbalanced**: Sum of Supply ({sum(s)}) != Sum of Demand ({sum(d)}).")
+    if len(entries.cost) != len(entries.supply):
+        raise ValueError(f"Dimensional error: Cost matrix has \
+                        {len(entries.cost)} rows, but Supply list has \
+                        {len(entries.supply)} elements.")
+
+    # Check that every row has the same length. The next check below only
+    # looks at entries.cost[0] as a stand-in for "the matrix's column
+    # count" -- that's only valid once we know the matrix is rectangular,
+    # so this has to run first. Without it, a ragged matrix like
+    # [[1, 2, 3], [4, 5]] passes every other check here (row count matches
+    # supply, row 0's length matches demand, sums balance) and only fails
+    # later, deep inside np.array(), with a raw numpy traceback instead of
+    # a clean validation message.
+    row_lengths = [len(row) for row in entries.cost]
+    if len(set(row_lengths)) != 1:
+        raise ValueError(f"Dimensional error: Cost matrix rows have \
+                        inconsistent lengths {row_lengths}. \
+                        Every row must have the same number of columns.")
+
+    if len(entries.cost[0]) != len(entries.demand):
+
+        raise ValueError(f"Dimensional error: Cost matrix has \
+        {len(entries.cost[0])} columns, but Demand list has \
+        {len(entries.demand)} elements.")
+    if sum(entries.supply) != sum(entries.demand):
+        raise ValueError(f"Transportation problem is **unbalanced**: \
+                Sum of Supply \
+                ({sum(entries.supply)}) != Sum of Demand \
+                ({sum(entries.demand)}).")
 
 
-    try:
-        assertions(c_lst, s_lst, d_lst)
-    except ValueError as e:
-        print(f"\n🛑 Validation Error: {e}")
-        exit(1)
+# Create matrices and arrays for working data
+# Bundle the computational arrays into a second structure
 
-
-# create matrices and arrays for working data
-c_array = np.array(c_lst)
-s_array = np.array(s_lst)
-d_array = np.array(d_lst)
-
-# The rest of the script (alloc_luc, etc.) follows here...
+class ComputationalData(NamedTuple):
+    cost_array: np.ndarray
+    supply_array: np.ndarray
+    demand_array: np.ndarray
 
 """
 If the search operation for the least unit cost yields a Tie, there is a 
@@ -134,23 +177,24 @@ preferred allocation according to the following two criteria (in this order):
 For this purpose a specialized function is to be coded.
 """
 
-def alloc_pref(s_array: np.ndarray, d_array: np.ndarray,
-              c_array: np.ndarray, min_indices: np.ndarray) -> Tuple:
+def alloc_pref(arrays: ComputationalData, min_indices: np.ndarray) ->\
+        Tuple[int, int]:
     """
     Determines the preferred allocation if there is Least Unit Cost Tie.
-    
     Takes as inputs the supply, demand, unit cost and min_indices arrays.
-
     Returns a tuple with indexes (i_pref, j_pref) of preferred allocation.
-
     Raises value error if the array of minimum indices doesn't have at least
     two pair of values.
     """
+
+    if min_indices.shape[0] < 2:
+        raise ValueError(
+            f"alloc_pref requires at least two tied indices, got {min_indices.shape[0]}."
+        )
     
     # 1. Ensure Copies for Side-Effect-Free Operation
-    s_cp = s_array.copy()
-    d_cp = d_array.copy()
-    c_cp = c_array.copy()
+    s_cp = arrays.supply_array.copy()
+    d_cp = arrays.demand_array.copy()
     min_indices_cp = min_indices.copy()
     
     #dict to store the indices and masses associated with least cost
@@ -166,47 +210,29 @@ def alloc_pref(s_array: np.ndarray, d_array: np.ndarray,
 
     # 4. Allocate when there is only one max tonnage
     if(len(min_indsQmax) < 2):
-        # print(f"min_indsQmax for only one alloc possible: {min_indsQmax}.")
         return min_indsQmax[0]
     # 5. More than one max tonnage, check if S > D
     else:
         for i,j in min_indsQmax:
             if s_cp[i] >= d_cp[j]:
-                # print(f"More Qmax, S > D: {i,j}.")
                 return(i,j)
-        # print(f"More Qmax, S == D: {min_indsQmax[0]}.")
         return min_indsQmax[0]
-    
-    
-    # 5. Raises error if least unit cost indices not a Tie
-    if min_indices.shape[0] < 2:
-        raise ValueError("Min_indices of least unit costs doesn't yield a Tie."
-                f"There are values: {min_indices.shape[0]}")
-
-    try:
-        alloc_pref(s_array, d_array, c_array, min_indices)
-
-    except ValueError as e:
-        print(f"\n🛑 Validation Error: {e}")
-        exit(1)
-
-
-def alloc_luc(s_array: np.ndarray, d_array: np.ndarray,
-            c_array: np.ndarray) -> np.ndarray:
+     
+def alloc_luc(arrays: ComputationalData) -> np.ndarray:
     """
     Determines a Basic Feasible Solution (BFS) using the Least Unit Cost Method.
-
     Takes as inputs the supply, demand, and unit cost arrays.
     Returns the allocation matrix (decision variables).
     """
+
     # 1. Ensure Copies for Side-Effect-Free Operation
-    s_cp = s_array.copy()  # Working copy of Supply
-    d_cp = d_array.copy()  # Working copy of Demand
-    c_cp = c_array.copy()  # Working copy of Cost matrix (to 'inf' out satisfied rows/cols)
+    s_cp = arrays.supply_array.copy()  # Working copy of Supply
+    d_cp = arrays.demand_array.copy()  # Working copy of Demand
+    c_cp = arrays.cost_array.copy()  # Working copy of Cost matrix (to 'inf' out satisfied rows/cols)
     
     # Initialize the Allocation matrix (X_ij)
     # Using np.zeros_like is cleaner and more NumPy idiomatic
-    allocation_matrix = np.zeros_like(c_array, dtype=int)
+    allocation_matrix = np.zeros_like(c_cp, dtype=int)
     
     # A value larger than any possible cost to effectively block satisfied sources/destinations
     BLOCK_COST = np.max(c_cp) + 1 
@@ -227,7 +253,7 @@ def alloc_luc(s_array: np.ndarray, d_array: np.ndarray,
         # 3. Allocate to preferred position, if this is the case
         #    by calling alloc_pref() function
         if min_indices.shape[0] != 1:
-            (i_pref, j_pref) = alloc_pref(s_array, d_array, c_array, min_indices)
+            (i_pref, j_pref) = alloc_pref(arrays, min_indices)
             allocation_quantity = min(s_cp[i_pref], d_cp[j_pref])
             allocation_matrix[i_pref, j_pref] = allocation_quantity
             # Update remaining supply and demand
@@ -291,27 +317,15 @@ def alloc_luc(s_array: np.ndarray, d_array: np.ndarray,
         if not allocated_in_cycle and np.sum(s_cp) > 0:
              # If we couldn't allocate anything despite remaining supply/demand, 
              # something is fundamentally wrong (e.g., all remaining costs were blocked).
-             # For a professional script, you might raise an error here.
-             print("Warning: Allocation loop stuck. Check data.")
+             logger.warning("Warning: Allocation loop stuck. Check data.")
              break
         
     return allocation_matrix
 
 # Example usage within the main script structure:
 
-# ... (data input and assertions section from previous answer) ...
-
-
-# The core function call is simplified
-zrs_alloc_array = alloc_luc(s_array, d_array, c_array)
-
-print("\n### Allocation Results ###")
-print("Alloc matrix (Decision Variables) with LUCM:") 
-print(zrs_alloc_array)
-
 # ... (rest of the script follows: sum_check, feasibility_cost) ...
-
-def feasibility_cost(allocation_matrix: np.ndarray, cost_matrix: np.ndarray) -> Tuple[bool, int]:
+def feasibility_cost(allocation_matrix: np.ndarray, arrays: ComputationalData) -> Tuple[bool, int]:
     """
     Checks for non-degenerate Basic Feasible Solution (BFS) and computes the total cost.
 
@@ -333,7 +347,7 @@ def feasibility_cost(allocation_matrix: np.ndarray, cost_matrix: np.ndarray) -> 
     # 1. Calculate Total Cost (using NumPy for efficiency)
     # The element-wise multiplication of allocation * cost gives the total cost 
     # for each cell, and then we sum the entire matrix.
-    total_cost = np.sum(allocation_matrix * cost_matrix)
+    total_cost = int(np.sum(allocation_matrix * arrays.cost_array))
     
     # 2. Check Feasibility (Non-Degeneracy)
     # The shape gives us the dimensions: (m, n) -> (rows, columns)
@@ -368,29 +382,59 @@ def sum_check(allocation_matrix: np.ndarray) -> int:
     """
     Function to check whether the sum of allocated quantities matches the total supply/demand.
     """
-    # Use NumPy's built-in sum() for a direct, efficient calculation
-    return allocation_matrix.sum()
-
-# ... (Previous code: c_array, s_array, d_array, zrs_alloc_array defined) ...
+    # Use NumPy's built-in sum() for a direct, efficient calculation.
+    # Wrapped in int() -- ndarray.sum() is typed to return Any by numpy's
+    # stubs, so without this mypy --strict flags an implicit Any leaking
+    # out of a function declared to return int.
+    return int(allocation_matrix.sum())
 
 # Final output section uses a try/except block to catch the new ValueError
 
-print("\n### Final Cost and Feasibility Check ###")
+def main() -> None:
+    # Get the basic user input. Parsing errors from get_user_input() now
+    # arrive as a raised ValueError instead of the function calling exit()
+    # itself -- main() is the only place that decides to log-and-exit.
+    try:
+        user_cost, user_supply, user_demand = get_user_input()
+    except ValueError as exc:
+        logger.error("\n❌ Error: %s", exc)
+        exit(1)
 
-# Check total quantity matches
-sum_z = sum_check(zrs_alloc_array)
-print("Sum of allocated quantities checks the total supply/demand:", sum_z == sum(s_array))
+    # Bundle the user input into the first structure for future usage
+    entries = RawInput(cost=user_cost, supply=user_supply, demand=user_demand)
+
+    try:
+        assertions(entries)
+    except ValueError as exc:
+        logger.error("\n🛑 Validation Error: %s", exc)
+        exit(1)
+
+    arrays = ComputationalData(cost_array=np.array(entries.cost),
+                               supply_array=np.array(entries.supply),
+                               demand_array=np.array(entries.demand))
+
+    # The core function call
+    zrs_alloc_array = alloc_luc(arrays)
+
+    logger.info("\n### Allocation Results ###")
+    logger.info("Alloc matrix (Decision Variables) with LUCM:\n%s", zrs_alloc_array)
+
+    logger.info("\n### Final Cost and Feasibility Check ###")
+
+    # Check total quantity matches
+    sum_z = sum_check(zrs_alloc_array)
+    logger.info("Sum of allocated quantities checks the total supply/demand:%s", sum_z == sum(arrays.supply_array))
+
+    try:
+        is_feasible, total_cost = feasibility_cost(zrs_alloc_array, arrays)
+
+        logger.info("Basic solution is feasible:%s", is_feasible)
+        logger.info("Least Unit Cost Method total allocation cost:%s", total_cost)
+
+    except ValueError as exc:
+        # Gracefully handle the degeneracy error raised by the function
+        logger.error("\n🛑 Error: %s", exc)
 
 
-try:
-    # Function call is also simplified (fewer arguments needed)
-    is_feasible, total_cost = feasibility_cost(zrs_alloc_array, c_array)
-
-    print("Basic solution is feasible:", is_feasible)
-    print(f"Least Unit Cost Method total allocation cost: {total_cost:,}")
-
-except ValueError as e:
-    # Gracefully handle the degeneracy error raised by the function
-    print(f"\n🛑 Error: {e}")
-    # You can now choose to exit, log, or prompt the user for other action here.
-    # For now, we will just print the error and let the program naturally end.
+if __name__ == "__main__":
+    main()
