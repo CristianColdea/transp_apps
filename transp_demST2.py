@@ -9,7 +9,6 @@ and cleaner code, Method decomposition to be heavily used.
 from __future__ import annotations
 
 import logging
-from math import e
 
 logging.basicConfig(
     level=logging.DEBUG,  # switch to logging.INFO to silence the .debug() calls
@@ -261,7 +260,7 @@ class GravitMod:
         i = 0   # produced passes counter
         j = 0   # attracted passes counter
 
-        while(is_cmp_flg == False):
+        while(not is_cmp_flg):
                        
             # get produced travels sums on computed travels
             s_Pic = []
@@ -391,7 +390,7 @@ class GravitMod:
         i = 0   # produced passes counter
         j = 0   # attracted passes counter
 
-        while(is_cmp_flg == False):
+        while(not is_cmp_flg):
                        
             # get produced travels sums on computed travels
             s_Pic = []
@@ -471,7 +470,7 @@ class GravitMod:
             
             is_cmp_flgP = GravitMod.comp(s_Pih, s_Pic)
 
-            if(is_cmp_flgA == True and is_cmp_flgP == True):
+            if(is_cmp_flgA and is_cmp_flgP):
                 is_cmp_flg = True
             else:
                 is_cmp_flg = False
@@ -586,7 +585,7 @@ class GravitMod:
         for row in travs:
             travsc.append(row)
 
-        while(is_cmp_flg == False):
+        while(not is_cmp_flg):
                        
             # get produced travels sums on computed travels
             s_Pic = []
@@ -600,7 +599,7 @@ class GravitMod:
             is_cmp_flg = GravitMod.comp(P_is, s_Pic)
             # print(is_cmp_flg)
 
-            if (is_cmp_flg == False):
+            if (not is_cmp_flg):
                 ccs = []   # list to store produced travels coefficients
                 for ps, pc in zip(P_is, s_Pic):
                     ccs.append(round(ps/pc, 3))
@@ -638,7 +637,7 @@ class GravitMod:
             
             is_cmp_flg = GravitMod.comp(A_js, s_Ajc)
             
-            if (is_cmp_flg == False):
+            if (not is_cmp_flg):
                 for ats, ac in zip(A_js, s_Ajc):
                     ccs.append(round(ats/ac, 3))
 
@@ -672,7 +671,7 @@ class GravitMod:
             
             is_cmp_flgP = GravitMod.comp(P_is, s_Pic)
 
-            if(is_cmp_flgA == True and is_cmp_flgP == True):
+            if(is_cmp_flgA and is_cmp_flgP):
                 is_cmp_flg = True
             else:
                 is_cmp_flg = False
@@ -726,7 +725,7 @@ class GravitMod:
 
         # print("Current matrix is, ", travs)
 
-        while(is_cmp_flg == False):
+        while(not is_cmp_flg):
                        
             # get produced travels sums on current travels
             s_Pic = []
@@ -750,7 +749,7 @@ class GravitMod:
             
             is_cmp_flgP = GravitMod.comp(P_is, s_Pic)
 
-            if(is_cmp_flgA == True and is_cmp_flgP == True):
+            if(is_cmp_flgA and is_cmp_flgP):
                 is_cmp_flg = True
             else:
                 is_cmp_flg = False
@@ -758,7 +757,7 @@ class GravitMod:
             if p == 1:
                is_cmp_flg = True
 
-            if (is_cmp_flg == False):
+            if (not is_cmp_flg):
                 ccsi = []   # list to store produced travels growth factors
                 for ps, pc in zip(P_is, s_Pic):
                     ccsi.append(round(ps/pc, 3))
@@ -850,7 +849,7 @@ class GravitMod:
         for row in travs:
             travsc.append(row)
         
-        while(is_cmp_flg == False):                       
+        while(not is_cmp_flg):                       
             # get produced travels sums on computed travels
             s_Pic = []
             for item in travsc:
@@ -858,7 +857,7 @@ class GravitMod:
 
             is_cmp_flgP = GravitMod.comp(P_is, s_Pic)
 
-            if (is_cmp_flgP == False):
+            if (not is_cmp_flgP):
                 ccsi = []   # list to store produced travels coefficients
                 for ps, pc in zip(P_is, s_Pic):
                     ccsi.append(round(ps/pc, 3))
@@ -877,14 +876,14 @@ class GravitMod:
             
             is_cmp_flgA = GravitMod.comp(A_js, s_Ajc)
             
-            if (is_cmp_flgA == False):
+            if (not is_cmp_flgA):
                 ccsj = []
                 for ats, ac in zip(A_js, s_Ajc):
                     ccsj.append(round(ats/ac, 3))
 
             # updating the travels matrix
                        
-            if(is_cmp_flgP == False or is_cmp_flgA == False):
+            if(not is_cmp_flgP or not is_cmp_flgA):
                 travsc_interm = []    #store the modified values
                 for x in range(len(travsc)):
                     for t in range(len(travsc[x])):
@@ -896,7 +895,7 @@ class GravitMod:
                       for i in range(0, len(travsc_interm), 3)]
 
             # recreate the current travels matrix
-            if(is_cmp_flgP == True and is_cmp_flgA == True):
+            if(is_cmp_flgP and is_cmp_flgA):
                 is_cmp_flg = True
                   
         travscr = []     # list to store rounded values, flatten form
@@ -959,7 +958,7 @@ class GravitMod:
         for row in travs:
             travsc.append(row)
                 
-        while(is_cmp_flg == False):
+        while(not is_cmp_flg):
             # get produced travels sums on computed travels
             s_Pic = []
             for item in travsc:
@@ -967,7 +966,7 @@ class GravitMod:
             
             is_cmp_flgP = GravitMod.comp(P_is, s_Pic)
             
-            if (is_cmp_flgP == False):
+            if (not is_cmp_flgP):
                 ccsi = []   # list to store produced travels coefficients
                 for ps, pc in zip(P_is, s_Pic):
                     ccsi.append(round(ps/pc, 3))
@@ -986,14 +985,14 @@ class GravitMod:
             
             is_cmp_flgA = GravitMod.comp(A_js, s_Ajc)
                         
-            if (is_cmp_flgA == False):
+            if (not is_cmp_flgA):
                 ccsj = []
                 for ats, ac in zip(A_js, s_Ajc):
                     ccsj.append(round(ats/ac, 3))
 
             # updating the travels matrix
                        
-            if(is_cmp_flgP == False or is_cmp_flgA == False):
+            if(not is_cmp_flgP or not is_cmp_flgA):
                 travsc_interm = []    #store the modified values
                 for x in range(len(travsc)):
                     for t in range(len(travsc[x])):
@@ -1005,7 +1004,7 @@ class GravitMod:
                       for i in range(0, len(travsc_interm), 3)]
 
             # recreate the current travels matrix
-            if(is_cmp_flgP == True and is_cmp_flgA == True):
+            if(is_cmp_flgP and is_cmp_flgA):
                 is_cmp_flg = True
                                                   
         travscr = []     # list to store rounded values, flatten form
@@ -1121,7 +1120,7 @@ class GravitMod:
         for row in travs:
             travsc.append(row)
 
-        while(is_cmp_flg == False):
+        while(not is_cmp_flg):
                        
             # get produced travels sums on computed travels
             s_Pic = []
@@ -1134,7 +1133,7 @@ class GravitMod:
             
             is_cmp_flg = GravitMod.comp(P_is, s_Pic)
             # print(is_cmp_flg)
-            if (is_cmp_flg == False):
+            if (not is_cmp_flg):
                 delta_P = []    #list to store the deltas of produced travels
                 for Pis, Pic in zip(P_is, s_Pic):
                     delta_P.append(Pis - Pic)
@@ -1189,7 +1188,7 @@ class GravitMod:
             # print("A_js, ", A_js)
             # print("s_Ajc, ", s_Ajc)
 
-            if (GravitMod.comp(A_js, s_Ajc) == False):
+            if (not GravitMod.comp(A_js, s_Ajc)):
                 delta_A = []    #list to store the deltas of attracted travels
                 for Ajs, Ajc in zip(A_js, s_Ajc):
                     delta_A.append(Ajs - Ajc)
@@ -1256,7 +1255,7 @@ class GravitMod:
             is_cmp_flgP = GravitMod.comp(P_is, s_Pic)
             # print("Flag on produced, ", is_cmp_flgP)
 
-            if(is_cmp_flgA == True and is_cmp_flgP == True):
+            if(is_cmp_flgA and is_cmp_flgP):
                 is_cmp_flg = True
             else:
                 is_cmp_flg = False
