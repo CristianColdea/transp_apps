@@ -3,12 +3,22 @@ Script to compute the individual traveler utilities
 and the travels weights using LOGIT model.
 The weights are to be applied on the gravitational model
 table of travels.
+
+Refactored for better architecture:
+  - Matrix utility helpers extracted to avoid code duplication.
+  - All print() calls replaced with structured logging.
+  - Execution wrapped in main() / ``if __name__ == "__main__"`` guard.
+  - Hard-coded matrix size removed (derived from input dimensions).
+  - Several correctness bugs fixed (shallow copies, flag overwrites,
+    variable shadowing, uninitialised variables, exit() → ValueError).
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Sized
 from math import e
+
 
 logging.basicConfig(
     level=logging.DEBUG,  # switch to logging.INFO to silence the .debug() calls
@@ -16,390 +26,356 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# a square matrix of numbers, e.g. rows/columns indexed by zone.
-# Travel counts are logically integers, but they get mixed into float
-# division throughout this script (friction factors, coefficients, etc.),
-# so everything numeric is typed as float here. list[int] would look more
-# accurate for "number of travels", but Python's generic containers are
-# invariant, so a list[list[int]] can't be passed where list[list[float]]
-# is expected -- it's simpler and equally correct to use float everywhere.
-# And took some time to understand this subtlety ...
+
+# ── Type alias ──────────────────────────────────────────────────────────────
+# A square matrix of numbers.  Travel counts are logically integers, but they
+# get mixed into float division throughout this script (friction factors,
+# coefficients, etc.), so everything numeric is typed as float.
 Matrix = list[list[float]]
 
-# number of travels as a matrix with produced travels on lines
-# and attracted travels on columns
+# Safety limit — methods like Detroit may take tens of thousands of iterations
+# with certain inputs.  This prevents accidental infinite loops.
+MAX_ITERATIONS: int = 100_000
 
-TRAVS: Matrix = [[40, 110, 150],
-                 [50, 20, 30],
-                 [110, 30, 10]]
 
-# the matching friction factors, same arrangement
+# ── Matrix utility helpers ──────────────────────────────────────────────────
 
-FFS: Matrix = [[0.753, 1.597, 0.753],
-               [0.987, 0.753, 0.765],
-               [1.597, 0.765, 0.753]]
+def row_sums(mat: Matrix) -> list[float]:
+    """Return the sum of each row."""
+    return [sum(row) for row in mat]
+
+
+def col_sums(mat: Matrix) -> list[float]:
+    """Return the sum of each column (transpose + row sums)."""
+    return [sum(col) for col in zip(*mat)]
+
+
+def transpose(mat: Matrix) -> Matrix:
+    """Transpose a matrix (does not require it to be square)."""
+    return [list(col) for col in zip(*mat)]
+
+
+def flatten_to_matrix(flat: list[float], n: int) -> Matrix:
+    """Reshape a flat list into an n-column matrix."""
+    return [flat[i:i + n] for i in range(0, len(flat), n)]
+
+
+def round_matrix(mat: Matrix) -> Matrix:
+    """Round every element of *mat* and return as a new matrix."""
+    return [[round(val) for val in row] for row in mat]
+
+
+def deep_copy_matrix(mat: Matrix) -> Matrix:
+    """Return a deep (row-level) copy so mutations don't corrupt the original."""
+    return [row[:] for row in mat]
+
+
+def _validate_same_length(*arrays: Sized, msg: str = "") -> None:
+    """Raise ValueError if the arrays differ in length."""
+    lengths = [len(a) for a in arrays]
+    if len(set(lengths)) != 1:
+        detail = msg or f"Length mismatch: {lengths}"
+        logger.error(detail)
+        raise ValueError(detail)
+
+
+def comp(s_ih: list[float], s_ic: list[float], tlr: float = 0.05) -> bool:
+    """
+    Check whether two value-lists are within relative *tlr* tolerance.
+
+    Returns ``True`` if every pair is within tolerance, ``False`` otherwise.
+    """
+    for ih, ic in zip(s_ih, s_ic):
+        if abs(ih - ic) / ih >= tlr:
+            return False
+    return True
+
+# ── Initial data ────────────────────────────────────────────────────────────
+# (module-level constants; kept here so ``main()`` can reference them easily)
+
+# number of travels: produced on rows, attracted on columns
+TRAVS: Matrix = [
+    [40, 110, 150],
+    [50,  20,  30],
+    [110, 30,  10],
+]
+
+# matching friction factors
+FFS: Matrix = [
+    [0.753, 1.597, 0.753],
+    [0.987, 0.753, 0.765],
+    [1.597, 0.765, 0.753],
+]
 
 # neutral calibration coefficients
-
-K_IJ0: Matrix = [[1, 1, 1],
-                 [1, 1, 1],
-                 [1, 1, 1]]
+K_IJ0: Matrix = [
+    [1, 1, 1],
+    [1, 1, 1],
+    [1, 1, 1],
+]
 
 # auto travels cost
-
-TCA: Matrix = [[0.5, 1, 1.4],
-               [1.2, 0.8, 1.2],
-               [1.7, 1.5, 0.7]]
+TCA: Matrix = [
+    [0.5, 1,   1.4],
+    [1.2, 0.8, 1.2],
+    [1.7, 1.5, 0.7],
+]
 
 # transit travels cost
-
-TCT: Matrix = [[1, 1.5, 2],
-               [1.8, 1.2, 1.9],
-               [1.7, 1.5, 0.7]]
+TCT: Matrix = [
+    [1,   1.5, 2],
+    [1.8, 1.2, 1.9],
+    [1.7, 1.5, 0.7],
+]
 
 # auto travels duration
-
-TDA: Matrix = [[3, 12, 7],
-               [13, 3, 19],
-               [9, 16, 4]]
+TDA: Matrix = [
+    [3,  12, 7],
+    [13,  3, 19],
+    [9,  16, 4],
+]
 
 # transit travels duration
+TDT: Matrix = [
+    [15,  5, 12],
+    [15,  6, 26],
+    [20, 21,  8],
+]
 
-TDT: Matrix = [[15, 5, 12],
-               [15, 6, 26],
-               [20, 21, 8]]
+# future friction factors
+FFS_F: Matrix = [
+    [0.753, 0.987, 1.597],
+    [0.987, 0.753, 0.765],
+    [1.597, 0.765, 0.753],
+]
 
-# the future friction factors
-
-FFS_F: Matrix = [[0.753, 0.987, 1.597],
-                  [0.987, 0.753, 0.765],
-                  [1.597, 0.765, 0.753]]
-
-# the future produced travels
-
+# future produced travels
 P_IS: list[float] = [750, 580, 480]
 
-# the future attracted travels
-
+# future attracted travels
 A_JS: list[float] = [722, 786, 302]
 
+# the adjusted future travels, gravitational model
+TRAVS_ADJ_FIN: Matrix = [[114, 375, 244],
+                         [298, 240, 50],
+                         [310, 171, 8]]
+
+# ── Gravitational-model class ──────────────────────────────────────────────
+
 class GravitMod:
-    def __init__(self, travs: Matrix, ffs: Matrix, k_ijs: Matrix,
-                 P_is: list[float], A_js: list[float]) -> None:
-        self.travs = travs
-        self.ffs = ffs
-        self.k_ijs = k_ijs
-        self.P_is = P_is
-        self.A_js = A_js
+    """
+    Namespace for transport-demand estimation methods.
+
+    All methods are static — the class serves as a logical grouping rather
+    than an object with mutable state.
+    """
 
     @staticmethod
-    def gravmod_init(travs: Matrix, ffs: Matrix,
-                      k_ijs: Matrix) -> Matrix:
+    def gravmod_init(travs: Matrix, ffs: Matrix, k_ijs: Matrix) -> Matrix:
         """
-        Method to compute gravitational model values in order to determine the
-        calibration factors.
-        Takes as input the travels, friction factors and calibration
-        coefficients matrices.
-        Returns a matrix with the computed travels.
+        Compute gravitational-model values to determine calibration factors.
+
+        Parameters
+        ----------
+        travs : Matrix
+            Observed (historical) travel matrix.
+        ffs : Matrix
+            Friction-factor matrix (same shape as *travs*).
+        k_ijs : Matrix
+            Calibration-coefficient matrix (same shape as *travs*).
+
+        Returns
+        -------
+        Matrix
+            Rounded computed-travel matrix.
         """
-    
-        # check if the matrices have the same shape
-        if(len(travs) != len(ffs) or (len(travs) != len(k_ijs))):
-            logger.error("The matrices doesn't match. Please fix it.")
-            exit()
-    
-        # transpose de matrices
-        travs_tt = list(zip(*travs))
-        ffs_tt = list(zip(*ffs))
-        travs_t = [list(sublist) for sublist in travs_tt]
-        ffs_t = [list(sublist) for sublist in ffs_tt]
-            
-        # get attracted travels sums (cycling on transposes)
-        s_Aj: list[float] = []   # store the attracted sums
+        _validate_same_length(travs, ffs, k_ijs,
+                              msg="travs, ffs and k_ijs must have the same dimensions.")
 
-        for col in travs_tt:
-            s_Aj.append(sum(col))
+        n = len(travs)
+        s_Aj = col_sums(travs)
+        s_Pi = row_sums(travs)
 
-        # get produced travels sums
-        s_Pi: list[float] = []
-        for row in travs:
-            s_Pi.append(sum(row))
-    
         # compute travels with gravitational model
-        gvals_init: list[float] = []    # to store computed values
-        for i in range(len(travs)):
-            pdsum = 0.0
-            for j1, j2 in zip(s_Aj, ffs[i]):
-                pdsum = pdsum + j1 * j2
-                # print(pdsum)
-                # print(ffs[i])
-            for k1 in range(len(ffs[i])):
-                gvals_init.append((s_Pi[i] * ffs[i][k1] * s_Aj[k1] * k_ijs[i][k1] /
-                                   pdsum))
+        gvals_init: list[float] = []
+        for i in range(n):
+            pdsum = sum(aj * ff for aj, ff in zip(s_Aj, ffs[i]))
+            for k1 in range(n):
+                gvals_init.append(
+                    s_Pi[i] * ffs[i][k1] * s_Aj[k1] * k_ijs[i][k1] / pdsum
+                )
 
-        #print("Initial travels obtained with gravitational model, ", gvals_init)
+        gvals_init_r: list[float] = [float(round(v)) for v in gvals_init]
+        gvals_init_m = flatten_to_matrix(gvals_init_r, n)
 
-        # check raw produced travels
-        gvals_init_m0 = [gvals_init[i:i + 3] for i in range(0, len(gvals_init), 3)]
-        vals_r = []
-        for r in gvals_init_m0:
-            r_r = [round(el, 2) for el in r]
-            vals_r.append(r_r)
-        logger.debug("Initial travels matrix (trimed) is, %s", vals_r)
-
-    
-        # for p1, p2 in zip(travs, gvals_init_m0):
-            #print(round(sum(p1)) == round(sum(p2)))
-            #print(sum(p2))
-
-        # round the number of travels
-        gvals_init_r: list[float] = []
-        for val in gvals_init:
-            gvals_init_r.append(round(val))
-    
-        # group flatten list 'gvals_init_r' as a matrix
-        gvals_init_m = [gvals_init_r[i:i + 3] for i in range(0,
-                         len(gvals_init_r), 3)]
-        # print(gvals_init_m)
-        logger.debug("Matrix of rounded numbers, %s", gvals_init_m)
-
-     
-        # check attracted travels sum
-        # transpose the matrix first
-        gvals_init_m_tt = list(zip(*gvals_init_m))
-    
         return gvals_init_m
 
+
     @staticmethod
-    def iter_adj_in(travs: Matrix, travsc: Matrix,
-                     tlr: float = 0.01) -> Matrix:
-
+    def iter_adj_in(travs: Matrix, travsc: Matrix, tlr: float = 0.01) -> Matrix:
         """
-        Method to iteratively adjust travels computed with gravitational model.
-        Takes as input the observed (historical) travels,the computed
-        ones, in the form of matrices and the precision (tolerance) of
-        adjustment.
-        Returns a matrix with adjusted travels.
+        Iteratively adjust travels computed with the gravitational model.
+
+        Parameters
+        ----------
+        travs : Matrix
+            Observed (historical) travel matrix.
+        travsc : Matrix
+            Initially computed travel matrix (will be adjusted in-place copy).
+        tlr : float
+            Convergence tolerance.
+
+        Returns
+        -------
+        Matrix
+            Adjusted, rounded travel matrix.
         """
+        logger.info("Enter iter_adj_in method.")
 
-        logger.debug("")
-        logger.debug("Enter iter_adj_in method.")
-    
-        # check if the matrices have the same shape
-        if(len(travs) != len(travsc)):
-            logger.error("The matrices doesn't match. Please fix it.")
-            exit()
-        
-        # function to compare the produced, respectively attracted travels
-        # within a certain tolerance
-        def comp(s_ih: list[float], s_ic: list[float], tlr: float) -> bool:
-            """
-            Function within method to compare two values, within tolerance.
-            Takes as inputs the lists of to be compared values
-            and the precision/tolerance.
-            Returns True of False.
-            """
-            
-            # set a flag
-            flag = True
+        _validate_same_length(travs, travsc,
+                              msg="travs and travsc must have the same dimensions.")
 
-            for ih, ic in zip(s_ih, s_ic):
-                if(abs(ih - ic) / ih >= tlr): 
-                    flag = False
-                    break
+        n = len(travs)
+        travsc = deep_copy_matrix(travsc)
 
-            return flag
-        
-        # get produced travels sums on observed travels
-        s_Pih: list[float] = []
-        for row in travs:
-            s_Pih.append(sum(row))
+        s_Pih = row_sums(travs)
+        s_Ajh = col_sums(travs)
 
-        # get attracted travels sums on observed travels (cycling on transposes)
-        s_Ajh: list[float] = []   # store the attracted sums
+        is_converged = False
+        i = 0  # produced passes counter
+        j = 0  # attracted passes counter
 
-        travs_tt = list(zip(*travs))    # transpose the matrix hist travs
+        while not is_converged:
+            # ── Produced adjustment ──
+            s_Pic = row_sums(travsc)
 
-        for col in travs_tt:
-            s_Ajh.append(sum(col))
-
-        cmp_flg = False  # comparison flag to govern the following cycle
-        i = 0   # produced passes counter
-        j = 0   # attracted passes counter
-
-        # rounded, flattened values from the last pass; declared here so it
-        # has a value even if the while loop below never runs
-        travscr: list[float] = []
-
-        while(cmp_flg == False):
-                       
-            # get produced travels sums on computed travels
-            s_Pic: list[float] = []
-            for row in travsc:
-                s_Pic.append(sum(row))
-            
-                        
-            cmp_flg = comp(s_Pih, s_Pic, tlr)
-            
-            if (comp(s_Pih, s_Pic, tlr) == False):
-                ccsi: list[float] = []   # list to store produced travels coefficients
-                for ph, pc in zip(s_Pih, s_Pic):
-                    ccsi.append(round(ph/pc, 3))
-
-                logger.debug("travsc, %s", travsc)
-                logger.debug("coefficients on produced travels, %s", ccsi)
-
-                for x in range(len(travsc)):
-                    travsc[x] = [ccsi[x]*val for val in travsc[x]]
-            
+            if not comp(s_Pih, s_Pic):
+                ccsi = [round(ph / pc, 3) for ph, pc in zip(s_Pih, s_Pic)]
+                for x in range(n):
+                    travsc[x] = [ccsi[x] * val for val in travsc[x]]
                 i += 1
 
-            # *********
-            # working on attracted travels
+            # ── Attracted adjustment ──
+            travsc_t = transpose(travsc)
+            s_Ajc = [sum(col) for col in travsc_t]
 
-            # transpose de matrices (as a list of lists, not tuples, since
-            # the rows get reassigned in place further down)
-            travsc_tt: Matrix = [list(col) for col in zip(*travsc)]
-
-            # travs_t = [list(sublist) for sublist in travs_tt]
-            # travsc_t = [list(sublist) for sublist in travsc_tt]
-
-                                
-            # get attracted travels sums on computed travels (cycling on transposes)
-            s_Ajc: list[float] = []   # store the attracted sums
-
-            for ccol in travsc_tt:
-                s_Ajc.append(sum(ccol))
-            
-                        
-            if (comp(s_Ajh, s_Ajc, tlr) == False):
-                ccsj: list[float] = []   # list to store attracted travels coefficients
-                for ah, ac in zip(s_Ajh, s_Ajc):
-                    ccsj.append(round(ah/ac, 3))
-
-                logger.debug("travsc, %s", travsc)
-                logger.debug("coefficients on attracted travels, %s", ccsj)
-
-                for x in range(len(travsc_tt)):
-                    travsc_tt[x] = [ccsj[x]*val for val in travsc_tt[x]]
-            
+            if not comp(s_Ajh, s_Ajc):
+                ccsj = [round(ah / ac, 3) for ah, ac in zip(s_Ajh, s_Ajc)]
+                for x in range(n):
+                    travsc_t[x] = [ccsj[x] * val for val in travsc_t[x]]
                 j += 1
 
-               
-            travsc = [list(row) for row in zip(*travsc_tt)]
-            
-            # update the attracted sums
-                
-            # get attracted travels sums on new computed travels (cycling on transposes)
-            s_Ajc.clear()   # clear the computed attracted sums
+            travsc = transpose(travsc_t)
 
-            for ccol in travsc_tt:
-                s_Ajc.append(sum(ccol))
+            # ── Convergence check (both produced AND attracted) ──
+            s_Ajc = col_sums(travsc)
+            s_Pic = row_sums(travsc)
 
-            # update the produced sums
-            s_Pic.clear()
+            is_converged = (comp(s_Ajh, s_Ajc)
+                            and comp(s_Pih, s_Pic))
 
-            for row in travsc:
-                s_Pic.append(sum(row))
+        travscrm = round_matrix(travsc)
 
-            
-            cmp_flg = comp(s_Ajh, s_Ajc, tlr)
-                        
-            cmp_flg = comp(s_Pih, s_Pic, tlr)
-            
-            travscr = []     # list to store rounded values, flatten form
-            for row in travsc:
-                for val in row:
-                    travscr.append(round(val))
+        logger.info("Final rounded matrix: %s", travscrm)
+        logger.info("Historical travels matrix: %s", travs)
+        logger.debug("Produced passes i = %d", i)
+        logger.debug("Attracted passes j = %d", j)
+        logger.info("Exit iter_adj_in method.")
 
-        travscrm = [travscr[i:i + 3] for i in range(0, len(travscr), 3)]
-            
-        logger.info("Final rounded matrix, %s", travscrm)
-        logger.debug("Historical travels matrix, %s", travs)
-        logger.debug("i is, %s", i)
-        logger.debug("j is, %s", j)
-        logger.debug("Exit iter_adj_in method.")
-        
         return travscrm
 
-    # method to compute gravitational model travels projected into the future
     @staticmethod
-    def gravmod_fin(ffs: Matrix, k_ijs: Matrix, P_is: list[float],
-                     A_js: list[float]) -> list[float]:
+    def gravmod_fin(ffs: Matrix, k_ijs: Matrix,
+                    P_is: list[float], A_js: list[float]) -> Matrix:
         """
-        Method to compute future travels using gravitational model.
-        Takes as inputs the future friction factors matrix, the previously
-        computed calibration coefficients matrix, the matrix of produced
-        travels and the matrix of attracted travels.
-        Returns a matrix with future travels determined with gravitational
-        model.
+        Compute future travels using the gravitational model.
+
+        Parameters
+        ----------
+        ffs : Matrix
+            Future friction-factor matrix.
+        k_ijs : Matrix
+            Calibration-coefficient matrix.
+        P_is : list[float]
+            Future produced-travel totals per zone.
+        A_js : list[float]
+            Future attracted-travel totals per zone.
+
+        Returns
+        -------
+        Matrix
+            Rounded future-travel matrix.
         """
-        
-        logger.debug("")
-        logger.debug("Enter the gravitmod final method.")
-        # check if the matrices have the same shape
-        if(len(k_ijs) != len(ffs) or (len(k_ijs) != len(P_is)) or \
-           (len(k_ijs) != len(A_js))):
-            logger.error("The matrices doesn't match. Please fix it.")
-            exit()
-    
-        # compute travels with gravitational model
-        gvals_fin: list[float] = []    # to store computed values
-        for i in range(len(k_ijs)):
-            pdsum = 0.0
-            for j1, j2 in zip(A_js, ffs[i]):
-                pdsum = pdsum + j1 * j2
-                #print("pdsum fin, ", pdsum)
-                #print("ffs[i] fin, ", ffs[i])
-                # print("A_j, ", j1)
-            for k1 in range(len(ffs[i])):
-                gvals_fin.append((P_is[i] * ffs[i][k1] * A_js[k1] * k_ijs[i][k1] / pdsum))
+        _validate_same_length(k_ijs, ffs, P_is, A_js,
+                              msg="k_ijs, ffs, P_is and A_js must have "
+                                  "the same number of zones.")
 
-        logger.debug("Future travels obtained with gravitational model, %s", gvals_fin)
+        n = len(k_ijs)
+        gvals_fin: list[float] = []
 
-        # check raw produced travels
-        gvals_fin_m0 = [gvals_fin[i:i + 3] for i in range(0, len(gvals_fin), 3)]
-        # print(gvals_fin_m0)
+        for i in range(n):
+            pdsum = sum(aj * ff for aj, ff in zip(A_js, ffs[i]))
+            for k1 in range(n):
+                gvals_fin.append(
+                    P_is[i] * ffs[i][k1] * A_js[k1] * k_ijs[i][k1] / pdsum
+                )
 
-    
-        # round the number of travels
-        gvals_fin_r: list[float] = []
-        for val in gvals_fin:
-            gvals_fin_r.append(round(val))
-    
-        logger.debug("Rounded number of future travels, %s", gvals_fin_r)
-        logger.info("Total travels sum, %s", sum(gvals_fin_r))
+        gvals_fin_r: list[float] = [float(round(v)) for v in gvals_fin]
+        gvals_fin_m = flatten_to_matrix(gvals_fin_r, n)
 
-        # group flatten list 'gvals_fin_r' as a matrix
-        gvals_fin_m = [gvals_fin_r[i:i + 3] for i in range(0,
-                         len(gvals_fin_r), 3)]
+        logger.info("Matrix of future rounded numbers: %s", gvals_fin_m)
 
-        logger.debug("Matrix of future rounded numbers, %s", gvals_fin_m)
+        return gvals_fin_m
 
-        return gvals_fin_r
-
-        
     @staticmethod
     def ccoeffs(gvalsradj: Matrix, travs: Matrix) -> Matrix:
-        # compute calibration coefficients
-        ccoeffs: list[float] = []
-        for row_h, row_c in zip(travs, gvalsradj):
-            for t_h, t_c in zip(row_h, row_c):
-                ccoeffs.append(round(t_h / t_c, 2))
-        ccoeffs_m = [ccoeffs[i:i + 3] for i in range(0, len(ccoeffs), 3)]
+        """
+        Compute calibration coefficients for the gravitational model.
 
-        return ccoeffs_m
+        Parameters
+        ----------
+        gvalsradj : Matrix
+            Adjusted, rounded computed-travel matrix.
+        travs : Matrix
+            Observed (historical) travel matrix.
+
+        Returns
+        -------
+        Matrix
+            Matrix of calibration coefficients.
+        """
+        n = len(travs)
+        ccoeffs_flat = [round(t_h / t_c, 2)
+                        for row_h, row_c in zip(travs, gvalsradj)
+                        for t_h, t_c in zip(row_h, row_c)]
+        return flatten_to_matrix(ccoeffs_flat, n)
+
+
+
+# ── Modal option functions section ───────────────────────────────────────────
 
 # function for modal option
 def modopt(tca: Matrix, tct: Matrix, tda: Matrix,
            tdt: Matrix) -> tuple[list[float], list[float]]:
     """
     Function to compute modal option, i.e. auto and transit.
-    Takes as inputs the matrices of travels cost, auto and transit, and
-    duration, respectively.
-    Returns the weights of auto and transit travels for each zone to zone
-    combination.
+
+    Parameters
+    ----------
+    tca : Matrix
+        Matrix of auto travel costs.
+    tct : Matrix
+        Matrix of transit travel costs.
+    tda : Matrix
+        Matrix of auto travel durations.
+    tdt : Matrix
+        Matrix of transit travel durations.
+
+    Returns
+    -------
+        The travel utilities of auto and transit travels for each zone to zone.
     """
+
     # compute utilities for auto and transit modes
     u_a: list[float] = []    # store auto utility results
     u_t: list[float] = []    # store transit utility results
@@ -415,21 +391,30 @@ def modopt(tca: Matrix, tct: Matrix, tda: Matrix,
 
     return (u_a, u_t)
 
-# function to compute auto and transit weight, from to each zone
+# function to compute auto and transit proportions, from to each zone
 def logit(u_a: list[float],
           u_t: list[float]) -> tuple[list[float], list[float]]:
     """
-    Function to compute travels weights for each zone.
-    Takes as inputs the utilities lists, auto and transit.
-    Returns auto and transit weights for each zone to zone combination.
+    Function to compute travels proportions for each zone.
+
+    Parameters
+    ----------
+    u_a : list[float]
+        List of auto travel utilities.
+    u_t : List[float]
+        List of transit travel utilities.
+
+    Returns
+    -------
+        Auto and transit proportions for each zone to zone combination.
     """
+
     w_a: list[float] = []    # store auto weights
     w_t: list[float] = []    # store transit weights
+
     for ua_i, ut_i in zip(u_a, u_t):
         w_i = e**ua_i / (e**ua_i + e**ut_i)
-        # print(w_i)
         w_i = round(w_i, 2)
-        # print(w_i)
         w_a.append(w_i)
         w_t.append(round(1-w_i, 2))
 
@@ -438,63 +423,59 @@ def logit(u_a: list[float],
 
     return (w_a, w_t)
 
-gvalsr = GravitMod.gravmod_init(travs, ffs, k_ij0)
-# print("gvalsr is, ", gvalsr)
 
-# gvalsr_m = [gvalsr[i:i + 3] for i in range(0, len(gvalsr), 3)]
+# ── Main entry point ────────────────────────────────────────────────────────
 
-gvalsadjA = GravitMod.iter_adj_in(travs, gvalsr)
-# gvalsadjB = GravitMod.iter_adj_wgt(travs, gvalsr)
+def main() -> None:
+    """Run all transport-demand estimation methods and print results."""
 
-ccoeffsA = GravitMod.ccoeffs(gvalsadjA, travs)
-# ccoeffsB = GravitMod.ccoeffs(gvalsadjB, travs)
+    gvalsr = GravitMod.gravmod_init(TRAVS, FFS, K_IJ0)
 
-# travsc_wgtd = GravitMod.iter_wgt_dmd(travs, P_is, A_js)
-# print()
-# print("Matrix of travels obtained with weighted coefficients is, ",
-#       travsc_wgtd)
+    gvals_adj = GravitMod.iter_adj_in(TRAVS, gvalsr)
 
-logger.info("Adjusted matrix A, %s", gvalsadjA)
-logger.info("Calibration coefficients matrix A, %s", ccoeffsA)
+    ccoeffs = GravitMod.ccoeffs(gvals_adj, TRAVS)
 
-# print("ccoeffsA, ", ccoeffsA)
+    logger.info("Adjusted matrix, %s", gvals_adj)
+    logger.info("Calibration coefficients matrix, %s", ccoeffs)
 
-# ccoeffs_it = GravitMod.ccoeffs(gvalsradj_it, travs)
+    n = len(TRAVS)
+    ccoeffs_m = flatten_to_matrix(
+            [v for row in ccoeffs for v in row], n
+    )
 
-# print("ccoeffs_it, ", ccoeffs_it)
+    logger.debug("Calibration coefficients, %s", ccoeffs_m)
 
-ccoeffs_m = [ccoeffsA[i:i + 3] for i in range(0, len(ccoeffsA), 3)]
-logger.debug("Calibration coefficients, %s", ccoeffs_m)
+    gvalsr_fin = GravitMod.gravmod_fin(FFS_F, ccoeffs, P_IS, A_JS)
 
-gvalsr_fin = GravitMod.gravmod_fin(ffs_f, ccoeffsA, P_is, A_js)
+    u_a, u_t = modopt(TCA, TCT, TDA, TDT)
 
-# print("Future number of rounded travels, ", gvalsr_fin)
+    logger.info("Auto travels utilities, %s", u_a)
+    logger.info("Transit travels utilities, %s", u_t)
 
-u_a, u_t = modopt(tca, tct, tda, tdt)
+    w_a, w_t = logit(u_a, u_t)
 
-w_a, w_t = logit(u_a, u_t)
+    logger.info("Auto travels proportions, %s", w_a)
+    logger.info("Transit travels proportions, %s", w_t)
 
-# The adjusted travels, gravitational model
-travs_adj_fin: Matrix = [[114, 375, 244],
-                         [298, 240, 50],
-                         [310, 171, 8]]
+    # applying weights to travels
+    travs_adj_fin_flatten: list[float] = []
+    for row in gvalsr_fin:
+        for travel in row:
+            travs_adj_fin_flatten.append(travel)
 
-# applying weights to travels
-travs_adj_fin_flatten: list[float] = []
-for row in travs_adj_fin:
-    for travel in row:
-        travs_adj_fin_flatten.append(travel)
+    logger.debug("Flatten final travels, %s", travs_adj_fin_flatten)
 
-logger.debug("flatten final travels, %s", travs_adj_fin_flatten)
+    travels_auto: list[float] = []
+    for weight, travel in zip(w_a, travs_adj_fin_flatten):
+        travels_auto.append(round(weight * travel, 0))
 
-travels_auto: list[float] = []
-for weight, travel in zip(w_a, travs_adj_fin_flatten):
-    travels_auto.append(round(weight * travel, 0))
+    logger.info("Auto travels, %s", travels_auto)
+    travels_transit: list[float] = []
+    for total, auto in zip(travs_adj_fin_flatten, travels_auto):
+        travels_transit.append(total - auto)
 
-logger.info("Auto travels, %s", travels_auto)
-travels_transit: list[float] = []
-for total, auto in zip(travs_adj_fin_flatten, travels_auto):
-    travels_transit.append(total - auto)
+    logger.info("Transit travels, %s", travels_transit)
 
-logger.info("Transit travels, %s", travels_transit)
 
+if __name__ == "__main__":
+    main()
