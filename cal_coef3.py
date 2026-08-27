@@ -29,59 +29,59 @@ Matrix = list[list[float]]
 # number of travels as a matrix with produced travels on lines
 # and attracted travels on columns
 
-travs: Matrix = [[40, 110, 150],
+TRAVS: Matrix = [[40, 110, 150],
                  [50, 20, 30],
                  [110, 30, 10]]
 
 # the matching friction factors, same arrangement
 
-ffs: Matrix = [[0.753, 1.597, 0.753],
+FFS: Matrix = [[0.753, 1.597, 0.753],
                [0.987, 0.753, 0.765],
                [1.597, 0.765, 0.753]]
 
 # neutral calibration coefficients
 
-k_ij0: Matrix = [[1, 1, 1],
+K_IJ0: Matrix = [[1, 1, 1],
                  [1, 1, 1],
                  [1, 1, 1]]
 
 # auto travels cost
 
-tca: Matrix = [[0.5, 1, 1.4],
+TCA: Matrix = [[0.5, 1, 1.4],
                [1.2, 0.8, 1.2],
                [1.7, 1.5, 0.7]]
 
 # transit travels cost
 
-tct: Matrix = [[1, 1.5, 2],
+TCT: Matrix = [[1, 1.5, 2],
                [1.8, 1.2, 1.9],
                [1.7, 1.5, 0.7]]
 
 # auto travels duration
 
-tda: Matrix = [[3, 12, 7],
+TDA: Matrix = [[3, 12, 7],
                [13, 3, 19],
                [9, 16, 4]]
 
 # transit travels duration
 
-tdt: Matrix = [[15, 5, 12],
+TDT: Matrix = [[15, 5, 12],
                [15, 6, 26],
                [20, 21, 8]]
 
 # the future friction factors
 
-ffs_f: Matrix = [[0.753, 0.987, 1.597],
+FFS_F: Matrix = [[0.753, 0.987, 1.597],
                   [0.987, 0.753, 0.765],
                   [1.597, 0.765, 0.753]]
 
 # the future produced travels
 
-P_is: list[float] = [750, 580, 480]
+P_IS: list[float] = [750, 580, 480]
 
 # the future attracted travels
 
-A_js: list[float] = [722, 786, 302]
+A_JS: list[float] = [722, 786, 302]
 
 class GravitMod:
     def __init__(self, travs: Matrix, ffs: Matrix, k_ijs: Matrix,
