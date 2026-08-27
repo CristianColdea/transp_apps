@@ -74,6 +74,18 @@ def _validate_same_length(*arrays: Sized, msg: str = "") -> None:
         detail = msg or f"Length mismatch: {lengths}"
         logger.error(detail)
         raise ValueError(detail)
+        
+
+def comp(s_ih: list[float], s_ic: list[float], tlr: float = 0.05) -> bool:
+    """
+    Check whether two value-lists are within relative *tlr* tolerance.
+
+    Returns ``True`` if every pair is within tolerance, ``False`` otherwise.
+    """
+    for ih, ic in zip(s_ih, s_ic):
+        if abs(ih - ic) / ih >= tlr:
+            return False
+    return True
 
 
 # ── Initial data ────────────────────────────────────────────────────────────
@@ -193,18 +205,6 @@ class GravitMod:
         return gvals_init_m
 
     @staticmethod
-    def comp(s_ih: list[float], s_ic: list[float], tlr: float = 0.05) -> bool:
-        """
-        Check whether two value-lists are within relative *tlr* tolerance.
-
-        Returns ``True`` if every pair is within tolerance, ``False`` otherwise.
-        """
-        for ih, ic in zip(s_ih, s_ic):
-            if abs(ih - ic) / ih >= tlr:
-                return False
-        return True
-
-    @staticmethod
     def iter_adj_in(travs: Matrix, travsc: Matrix, tlr: float = 0.01) -> Matrix:
         """
         Iteratively adjust travels computed with the gravitational model.
@@ -242,7 +242,7 @@ class GravitMod:
             # ── Produced adjustment ──
             s_Pic = row_sums(travsc)
 
-            if not GravitMod.comp(s_Pih, s_Pic):
+            if not comp(s_Pih, s_Pic):
                 ccsi = [round(ph / pc, 3) for ph, pc in zip(s_Pih, s_Pic)]
                 for x in range(n):
                     travsc[x] = [ccsi[x] * val for val in travsc[x]]
@@ -252,7 +252,7 @@ class GravitMod:
             travsc_t = transpose(travsc)
             s_Ajc = [sum(col) for col in travsc_t]
 
-            if not GravitMod.comp(s_Ajh, s_Ajc):
+            if not comp(s_Ajh, s_Ajc):
                 ccsj = [round(ah / ac, 3) for ah, ac in zip(s_Ajh, s_Ajc)]
                 for x in range(n):
                     travsc_t[x] = [ccsj[x] * val for val in travsc_t[x]]
@@ -264,8 +264,8 @@ class GravitMod:
             s_Ajc = col_sums(travsc)
             s_Pic = row_sums(travsc)
 
-            is_converged = (GravitMod.comp(s_Ajh, s_Ajc)
-                            and GravitMod.comp(s_Pih, s_Pic))
+            is_converged = (comp(s_Ajh, s_Ajc)
+                            and comp(s_Pih, s_Pic))
 
         travscrm = round_matrix(travsc)
 
@@ -326,7 +326,7 @@ class GravitMod:
             # ── Produced adjustment ──
             s_Pic = row_sums(travsc)
 
-            if not GravitMod.comp(s_Pih, s_Pic):
+            if not comp(s_Pih, s_Pic):
                 delta_P = [ph - pc for ph, pc in zip(s_Pih, s_Pic)]
                 remind_P_flat = [c * d for cP, d in zip(c_Pi, delta_P)
                                  for c in cP]
@@ -341,7 +341,7 @@ class GravitMod:
             travsc_t = transpose(travsc)
             s_Ajc = [sum(col) for col in travsc_t]
 
-            if not GravitMod.comp(s_Ajh, s_Ajc):
+            if not comp(s_Ajh, s_Ajc):
                 delta_A = [ah - ac for ah, ac in zip(s_Ajh, s_Ajc)]
                 remind_A_flat = [c * d for cA, d in zip(c_Aj, delta_A)
                                  for c in cA]
@@ -357,8 +357,8 @@ class GravitMod:
             s_Ajc = col_sums(travsc)
             s_Pic = row_sums(travsc)
 
-            is_converged = (GravitMod.comp(s_Ajh, s_Ajc)
-                            and GravitMod.comp(s_Pih, s_Pic))
+            is_converged = (comp(s_Ajh, s_Ajc)
+                            and comp(s_Pih, s_Pic))
 
         travscrm = round_matrix(travsc)
 
@@ -475,7 +475,7 @@ class GravitMod:
             # ── Produced adjustment ──
             s_Pic = row_sums(travsc)
 
-            if not GravitMod.comp(P_is, s_Pic):
+            if not comp(P_is, s_Pic):
                 ccs = [round(ps / pc, 3) for ps, pc in zip(P_is, s_Pic)]
                 for x in range(n):
                     travsc[x] = [ccs[x] * val for val in travsc[x]]
@@ -485,7 +485,7 @@ class GravitMod:
             travsc_t = transpose(travsc)
             s_Ajc = [sum(col) for col in travsc_t]
 
-            if not GravitMod.comp(A_js, s_Ajc):
+            if not comp(A_js, s_Ajc):
                 ccs_a = [round(ats / ac, 3) for ats, ac in zip(A_js, s_Ajc)]
                 for x in range(n):
                     travsc_t[x] = [ccs_a[x] * val for val in travsc_t[x]]
@@ -497,8 +497,8 @@ class GravitMod:
             s_Ajc = col_sums(travsc)
             s_Pic = row_sums(travsc)
 
-            is_converged = (GravitMod.comp(A_js, s_Ajc)
-                            and GravitMod.comp(P_is, s_Pic))
+            is_converged = (comp(A_js, s_Ajc)
+                            and comp(P_is, s_Pic))
 
         travscrm = round_matrix(travsc)
 
@@ -553,8 +553,8 @@ class GravitMod:
             travsc_t = transpose(travsc)
             s_Ajc = col_sums(travsc)
 
-            is_cmp_flgA = GravitMod.comp(A_js, s_Ajc)
-            is_cmp_flgP = GravitMod.comp(P_is, s_Pic)
+            is_cmp_flgA = comp(A_js, s_Ajc)
+            is_cmp_flgP = comp(P_is, s_Pic)
 
             if (is_cmp_flgA and is_cmp_flgP) or p >= max_passes:
                 is_converged = True
@@ -625,13 +625,13 @@ class GravitMod:
 
         while not is_converged:
             s_Pic = row_sums(travsc)
-            is_cmp_flgP = GravitMod.comp(P_is, s_Pic)
+            is_cmp_flgP = comp(P_is, s_Pic)
 
             if not is_cmp_flgP:
                 ccsi = [round(ps / pc, 3) for ps, pc in zip(P_is, s_Pic)]
 
             s_Ajc = col_sums(travsc)
-            is_cmp_flgA = GravitMod.comp(A_js, s_Ajc)
+            is_cmp_flgA = comp(A_js, s_Ajc)
 
             if not is_cmp_flgA:
                 ccsj = [round(ats / ac, 3) for ats, ac in zip(A_js, s_Ajc)]
@@ -700,13 +700,13 @@ class GravitMod:
                 break
 
             s_Pic = row_sums(travsc)
-            is_cmp_flgP = GravitMod.comp(P_is, s_Pic)
+            is_cmp_flgP = comp(P_is, s_Pic)
 
             if not is_cmp_flgP:
                 ccsi = [round(ps / pc, 3) for ps, pc in zip(P_is, s_Pic)]
 
             s_Ajc = col_sums(travsc)
-            is_cmp_flgA = GravitMod.comp(A_js, s_Ajc)
+            is_cmp_flgA = comp(A_js, s_Ajc)
 
             if not is_cmp_flgA:
                 ccsj = [round(ats / ac, 3) for ats, ac in zip(A_js, s_Ajc)]
@@ -798,7 +798,7 @@ class GravitMod:
             # ── Produced adjustment ──
             s_Pic = row_sums(travsc)
 
-            if not GravitMod.comp(P_is, s_Pic):
+            if not comp(P_is, s_Pic):
                 delta_P = [pis - pic for pis, pic in zip(P_is, s_Pic)]
                 remind_P_flat = [c * d for cP, d in zip(c_Pi, delta_P)
                                  for c in cP]
@@ -815,7 +815,7 @@ class GravitMod:
             travsc_t = transpose(travsc)
             s_Ajc = [sum(col) for col in travsc_t]
 
-            if not GravitMod.comp(A_js, s_Ajc):
+            if not comp(A_js, s_Ajc):
                 delta_A = [ajs - ajc for ajs, ajc in zip(A_js, s_Ajc)]
                 remind_A_flat = [c * d for cA, d in zip(c_Aj, delta_A)
                                  for c in cA]
@@ -834,8 +834,8 @@ class GravitMod:
             s_Ajc = [sum(col) for col in travsc_t]
             s_Pic = row_sums(travsc)
 
-            is_converged = (GravitMod.comp(A_js, s_Ajc)
-                            and GravitMod.comp(P_is, s_Pic))
+            is_converged = (comp(A_js, s_Ajc)
+                            and comp(P_is, s_Pic))
 
         travscrm = round_matrix(travsc)
 
