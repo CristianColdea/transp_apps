@@ -4,283 +4,334 @@ Method/Algorithm. Takes as input the square matrix of assignment costs,
 'sources' and 'destinations' being each equal to one. Assignment costs
 must be natural numbers, even 0.
 Returns the optimal assignment solution found with the Hungarian Method.
+
+Refactored for better architecture:
+  - All execution wrapped in main() / ``if __name__ == "__main__"`` guard.
+  - All print() calls replaced with structured logging.
+  - exit() calls replaced with exceptions.
+  - Duplicate best_zeros() call eliminated.
+  - Dead bare-literal lines removed.
+  - Old-style typing imports replaced with modern built-in generics.
+  - Type annotations added throughout (including nested backtrack function).
+  - Bug fix: final output now correctly reports the minimum total cost.
 """
 
-from typing import List, Tuple, Any
-import ast # Required for safe string evaluation
+from __future__ import annotations
+
+import ast
+import logging
+
 import numpy as np
 
+# ── Logging setup ────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.DEBUG,  # switch to logging.INFO to silence .debug() calls
+    format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
-# +++++ USER INTERFACE AND INPUT HANDLING SECTION +++++
+# ── User interface and input handling ────────────────────────────────────────
+
+def parse_matrix_literal(raw: str) -> list[list[int]]:
+    """
+    Parse a cost-matrix string as a single Python literal.
+
+    Accepts any nesting style ast.literal_eval understands -- rows as
+    tuples or lists, with or without an outer wrapper, with or without
+    spaces -- rather than guessing the structure via string replacement.
+    A single bare row (e.g. "(1, 2, 3)") is normalized into a one-row
+    matrix so the return shape is always list[list[int]].
+    """
+    parsed = ast.literal_eval(raw.strip())
+
+    if parsed and not isinstance(parsed[0], (list, tuple)):
+        parsed = (parsed,)
+
+    return [list(row) for row in parsed]
+
 
 def get_user_input() -> list[list[int]]:
     """
-    Prompts the user for assignment cost matrix.
-    Validates and safely converts the string inputs to required Python lists.
+    Prompt the user for the assignment cost matrix.
+
+    Validates and safely converts the string input to a Python list of lists.
+    Accepts any format ast.literal_eval understands, for example:
+      - Tuple rows:  (1, 2, 3), (4, 5, 6), (7, 8, 9)
+      - List rows:   [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+
+    Raises
+    ------
+    ValueError
+        On any parse or syntax error.  The caller (main()) decides whether
+        to log and exit -- this function does not call exit() itself.
     """
-    print("""
-The following section provides the means of inputting data for the assignment
-problem.
-Required data: **assignment cost matrix (C)**.
-
-Input format example:
-- Cost Matrix C (by row): (1, 2, 3), (4, 5, 6), (7, 8, 9) or
-  [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
-
-The assignment problem must be **balanced**: the matrix of assignment
-costs must be a squared one.
-""")
+    logger.info(
+        "\nThe following section provides the means of inputting data for the"
+        " assignment problem.\n"
+        "Required data: assignment cost matrix (C).\n\n"
+        "Input format example:\n"
+        "  - Cost Matrix C (by row): (1, 2, 3), (4, 5, 6), (7, 8, 9)  or\n"
+        "    [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\n\n"
+        "The assignment problem must be balanced: the cost matrix must be square."
+    )
 
     try:
-        # Get input strings
         c_str = input("Enter the matrix cost C:\n> ")
-       
-        # --- Safe Parsing using ast.literal_eval ---
-        # This safely evaluates a string containing a Python literal structure (list/tuple).
-
-        # Parsing Cost Matrix (handling multiple rows/tuples)
-        c_lst: List[List[int]] = []
-        # Normalizing input: replace outer brackets/parentheses, then split by row separator
-        c_rows_str = c_str.strip().strip('[]()')
-        
-        # Determine the row delimiter based on common matrix input styles
-        # If it's a list of lists, split by the comma outside of inner lists/tuples
-        if any(char in c_rows_str for char in ['[', '(']):
-             # If input is like (1, 2), (3, 4) - we split by '), ('
-             c_rows_str = c_rows_str.replace('], [', ')|(').replace('), (', ')|(') 
-             row_list = c_rows_str.split('|')
-        else:
-             # Assuming input is comma-separated tuples like: (1, 2, 3), (4, 5, 6)
-             # The original example implies splitting by a comma followed by a space. 
-             # We will try to parse each row separately.
-             row_list = c_rows_str.split('), ') # A simple heuristic for specific format
-
-        # Final list comprehension for parsing each row
-        for r_str in row_list:
-            # Clean up residual characters and evaluate
-            cleaned_r_str = r_str.strip(' )([]')
-            # If the string is empty after cleaning, skip (e.g., from extra commas)
-            if not cleaned_r_str:
-                continue
-            
-            # Reconstruct the tuple/list structure before evaluation for safety/compatibility
-            evaluated_row = ast.literal_eval(f"({cleaned_r_str})") 
-            c_lst.append(list(evaluated_row))
-        
+        # Parsing delegated to parse_matrix_literal() -- see its docstring --
+        # instead of manually splitting/replacing on bracket characters, which
+        # only matched a couple of anticipated spacing/punctuation patterns.
+        c_lst = parse_matrix_literal(c_str)
         return c_lst
 
-    except ValueError as e:
-        print(f"\n❌ Error: Failed to parse input. Please check your formatting.")
-        print(f"Details: {e}")
-        exit(1)
-    except SyntaxError:
-        print(f"\n❌ Error: Input format is invalid. Ensure you use proper list/tuple syntax (e.g., (10, 15) or [10, 15]).")
-        exit(1)
+    except ValueError as exc:
+        # Don't log or exit() here -- this function's job is to report the
+        # problem, not decide the program's fate.  Raise it and let the
+        # caller (main()) decide whether to log, retry, or exit.
+        raise ValueError(
+            f"Failed to parse input. Please check your formatting. Details: {exc}"
+        ) from exc
+    except SyntaxError as exc:
+        raise ValueError(
+            "Input format is invalid. Ensure you use proper list/tuple syntax "
+            "(e.g., (1, 2, 3), (4, 5, 6) or [[1, 2, 3], [4, 5, 6]])."
+        ) from exc
 
 
-# --- Execution Start ---
-
-c_lst = get_user_input()
-# print(f"c_lst: {c_lst}")
+# ── Validation ───────────────────────────────────────────────────────────────
 
 def assertions(c: list[list[int]]) -> None:
-    # ... (Your original assertions function)
-    # Using the standard type hint List instead of list for compatibility with python versions < 3.9
-    
     """
-    Function to check the dimensional 'sanity', i.e. assignment cost
-    matrix must be a squared one.
-    Signals problems and aborts execution.
+    Check dimensional 'sanity': the assignment cost matrix must be square.
+
+    Raises
+    ------
+    ValueError
+        If the matrix is not square.
     """
     if len(c) != len(c[0]):
-        raise ValueError(f"Dimensional error: Cost matrix is not squared.")
-
-try:
-    assertions(c_lst)
-except ValueError as e:
-    print(f"\n🛑 Validation Error: {e}")
-    exit(1)
+        raise ValueError("Dimensional error: cost matrix is not square.")
 
 
-# create a matrix from costs list of lists
-c_array = np.array(c_lst)
-    
-# print(f"\nInput data numpy array: \n{c_array}")
+# ── Algorithm functions ───────────────────────────────────────────────────────
 
-# 1. Function to reduce cost matrix on rows or columns
-def reduce_matrix(c:np.ndarray) -> np.ndarray:
+def reduce_matrix(c: np.ndarray) -> np.ndarray:
     """
-    Function to reduce the costs on row or columns.
-    Takes as input the assignment cost numpy matrix.
-    Returns reduced matrix on rows.
-    """
+    Subtract the row minimum from every element of each row.
 
-    # make copy to combat unwanted side effects
+    Parameters
+    ----------
+    c : np.ndarray
+        Square assignment-cost matrix.
+
+    Returns
+    -------
+    np.ndarray
+        Row-reduced matrix.
+
+    Raises
+    ------
+    ValueError
+        If the matrix is not square.
+    """
     c_cp = c.copy()
-    # check if passed arg is a square matrix
     if c_cp.shape[0] != c_cp.shape[1]:
-        print(f"\n🛑Matrix Shape Error: {c_cp.shape}")
-        exit(1)
+        raise ValueError(f"Matrix shape error: {c_cp.shape} is not square.")
 
-    return (c_cp - np.min(c_cp, axis=1, keepdims=True))
+    row_mins: np.ndarray = np.min(c_cp, axis=1, keepdims=True)
+    result: np.ndarray = c_cp - row_mins
+    return result
 
-#2. Function to efficiently cross out zeros in reduced costs matrix
-def cross_out_nulls(c_red:np.ndarray) -> list[int]:
+
+def cross_out_nulls(c_red: np.ndarray) -> list[int]:
     """
-    Takes as input the reduced costs matrix.
-    Counts the zeros on each row.
-    Returns a list with number of zeros on each row.
-    """
+    Count the zeros on each row of the reduced cost matrix.
 
-    # make copy to combat unwanted side effects
+    Parameters
+    ----------
+    c_red : np.ndarray
+        Reduced cost matrix.
+
+    Returns
+    -------
+    list[int]
+        Number of zeros in each row.
+    """
     c_red_cp = c_red.copy()
-    nulls = []
-    for row in c_red_cp:
-        nulls.append(np.count_nonzero(row == 0))
-
-    return nulls
+    return [int(np.count_nonzero(row == 0)) for row in c_red_cp]
 
 
-#3. Finding the correct sequences of zeros (one zero/row-col) 
-def assign_opt(c_red:np.ndarray) -> list[list[tuple]]:
+def assign_opt(c_red: np.ndarray) -> list[list[tuple[int, int]]]:
     """
-    Finds all sequences of zeros in the reduced costs matrix such
-    there is exactly one zero in each row and each column.
-    Returns a list with found sequences.
-    """
+    Find all zero-assignment sequences with exactly one zero per row and column.
 
-    # make copy to combat unwanted side effects
+    Uses backtracking over the pre-computed zero positions in each row.
+
+    Parameters
+    ----------
+    c_red : np.ndarray
+        Reduced cost matrix.
+
+    Returns
+    -------
+    list[list[tuple[int, int]]]
+        All valid assignment sequences (each a list of (row, col) pairs).
+    """
     c_red_cp = c_red.copy()
- 
     n = c_red_cp.shape[0]
-    
-    # Pre-compute the column indices of zeros for each row to speed up lookup
-    zero_positions = [np.where(c_red_cp[r] == 0)[0] for r in range(n)]
-    
-    all_sequences = []
 
-    def backtrack(row, used_cols, current_seq):
+    # Pre-compute column indices of zeros for each row.
+    zero_positions = [np.where(c_red_cp[r] == 0)[0] for r in range(n)]
+
+    all_sequences: list[list[tuple[int, int]]] = []
+
+    def backtrack(
+        row: int,
+        used_cols: set[int],
+        current_seq: list[tuple[int, int]],
+    ) -> None:
         if row == n:
             all_sequences.append(list(current_seq))
             return
 
         for col in zero_positions[row]:
             if col not in used_cols:
-                # Explore this branch
                 used_cols.add(col)
-                current_seq.append((row, col))
-                
+                current_seq.append((row, int(col)))
+
                 backtrack(row + 1, used_cols, current_seq)
-                
-                # Backtrack
+
                 current_seq.pop()
                 used_cols.remove(col)
 
     backtrack(0, set(), [])
     return all_sequences
 
-#4. Optimization section
-def best_zeros(seq:list[tuple], c_array: np.ndarray) -> tuple:
-    """
-    Gets the assignment solution and its associated total cost.
-    Takes as input the assignment sequence and the initial cost
-    matrix.
-    Returns a tuple with total cost and the numpy array of assignment.
-    """
 
-    # make copies to combat unwanted side effects
-    seq_cp = seq.copy()
+def best_zeros(
+    seq: list[tuple[int, int]],
+    c_array: np.ndarray,
+) -> tuple[int, np.ndarray]:
+    """
+    Compute the total assignment cost and the assignment matrix for a sequence.
+
+    Parameters
+    ----------
+    seq : list[tuple[int, int]]
+        Assignment sequence — one (row, col) pair per task.
+    c_array : np.ndarray
+        Original (unreduced) cost matrix.
+
+    Returns
+    -------
+    tuple[int, np.ndarray]
+        ``(total_cost, assignment_matrix)`` where *assignment_matrix* has the
+        original costs at assigned positions and zeros elsewhere.
+    """
     c_cp = c_array.copy()
-
-    # create a matrix with zeros for assignment
-
     assignment_matrix = np.zeros_like(c_array, dtype=int)
 
-    for tpl in seq_cp:
-        assignment_matrix[tpl[0], tpl[1]] = c_cp[tpl[0], tpl[1]]
+    for row, col in seq:
+        assignment_matrix[row, col] = c_cp[row, col]
 
-    assignment_cost = np.sum(assignment_matrix)
-
+    assignment_cost = int(np.sum(assignment_matrix))
     return (assignment_cost, assignment_matrix)
 
-# print(best_zeros([(0,3), (1,2), (2,0), (3,1)], c_array)[1])
 
-#5. Functions call, assignment and total cost
-# Testing the assignment on zeros function
-c_red = reduce_matrix(reduce_matrix(c_array).T).T
+# ── Main entry point ──────────────────────────────────────────────────────────
 
-print(f"\nReduced cost matrix: \n{c_red}")
+def main() -> None:
+    """Run the Hungarian Method assignment optimiser."""
 
-BLOCK_COST = -1
-# crossed = 0 #start iterating from zero crossed out rows/cols
-not_allocated = True
+    # ── Input & validation ──
+    # Parsing errors from get_user_input() arrive as a raised ValueError
+    # instead of the function calling exit() itself -- main() is the only
+    # place that decides to log-and-exit.
+    try:
+        c_lst = get_user_input()
+    except ValueError as exc:
+        logger.error("\n\u274c Error: %s", exc)
+        raise SystemExit(1) from exc
 
-(1, 3, 4), (1, 2, 5), (3, 2, 6)
-(3, 2, 5), (5, 5, 3), (5, 4, 2)
-(7, 6, 4, 3), (9, 5, 2, 6), (4, 8, 5, 3), (6, 2, 5, 8)
+    try:
+        assertions(c_lst)
+    except ValueError as exc:
+        logger.error("Validation error: %s", exc)
+        raise SystemExit(1) from exc
 
-while (not_allocated):
-    c_work = c_red.copy() #get a working copy of reduced costs array
-    # print(f"c_copy: \n{c_red.copy()}")
-    crossed = 0
-    
-    crossed_rows = [] #store the indexes of crossed out rows
-    crossed_cols = [] #store the indexes of crossed out cols
+    c_array = np.array(c_lst)
 
-    # 5.1. Cross out zeros 'efficiently'
-    while(np.count_nonzero(c_work == 0) != 0): #there are still zeros ...
-        nulls_on_rows = cross_out_nulls(c_work)  #check the nulls on rows
-        nulls_on_cols = cross_out_nulls(c_work.T) #check the nulls on cols
-                
-        if (max(nulls_on_rows) >= max(nulls_on_cols)): #more nulls on rows ...
-            to_cross_out = nulls_on_rows.index(max(nulls_on_rows))
-            c_work[to_cross_out] = BLOCK_COST #replace crossed outs
-            crossed_rows.append(to_cross_out)
-            crossed += 1 #count crossed outs
-        else: #more nulls on cols
-            to_cross_out = nulls_on_cols.index(max(nulls_on_cols))
-            c_work.T[to_cross_out] = BLOCK_COST #replace crossed outs
-            crossed_cols.append(to_cross_out)
-            crossed += 1 #count crossed outs
+    # ── Reduce costs on rows then columns (two-pass Hungarian reduction) ──
+    # First pass:  subtract row minima  →  reduce_matrix(c_array)
+    # Second pass: subtract column minima →  reduce_matrix(...T).T
+    c_red = reduce_matrix(reduce_matrix(c_array).T).T
+    logger.info("Reduced cost matrix:\n%s", c_red)
 
-        # print(f"\nAfter: {crossed} cross out: \n{c_work}")
-        # print(f"crossed: {crossed}")
+    BLOCK_COST = -1   # sentinel used to mark crossed-out rows/columns
+    not_allocated = True
 
-        # print(f"\nCrossed out rows: {crossed_rows}")
-        # print(f"\nCrossed out cols: {crossed_cols}")
+    while not_allocated:
+        c_work = c_red.copy()
+        crossed = 0
+        crossed_rows: list[int] = []
+        crossed_cols: list[int] = []
+
+        # ── Step 1: cross out zeros efficiently ──
+        # Greedily cover all zeros with the minimum number of lines by always
+        # crossing out the row or column that contains the most zeros.
+        while np.count_nonzero(c_work == 0) != 0:
+            nulls_on_rows = cross_out_nulls(c_work)
+            nulls_on_cols = cross_out_nulls(c_work.T)
+
+            if max(nulls_on_rows) >= max(nulls_on_cols):
+                to_cross = nulls_on_rows.index(max(nulls_on_rows))
+                c_work[to_cross] = BLOCK_COST
+                crossed_rows.append(to_cross)
+            else:
+                to_cross = nulls_on_cols.index(max(nulls_on_cols))
+                c_work.T[to_cross] = BLOCK_COST
+                crossed_cols.append(to_cross)
+
+            crossed += 1
+
+        if crossed == len(c_red):
+            # ── Step 2: optimal solution reachable — assign on zeros ──
+            zero_seqs = assign_opt(c_red)
+            possible_assignments: dict[int, np.ndarray] = {}
+
+            for seq in zero_seqs:
+                cost, matrix = best_zeros(seq, c_array)
+                possible_assignments[cost] = matrix
+
+            best_cost = min(possible_assignments)
+            delivered = possible_assignments[best_cost]
+
+            logger.info("Delivered assignment solution:\n%s", delivered)
+            logger.info("Total cost of assignment: %s", best_cost)
+
+            not_allocated = False
+
+        else:
+            # ── Step 3: not yet optimal — adjust the reduced cost matrix ──
+
+            # Find intersections of crossed rows and columns.
+            intersections = [
+                (r, c) for r in crossed_rows for c in crossed_cols
+            ]
+
+            # Subtract the smallest uncovered value from all uncovered cells.
+            min_opt = int(np.min(c_work[c_work > -1]))
+            c_work = np.where(c_work > -1, c_work - min_opt, c_work)
+
+            # Add it back to the intersection cells.
+            for r, c in intersections:
+                c_work[r, c] = c_red[r, c] + min_opt
+
+            # Restore the blocked (crossed-out) cells to their reduced values.
+            c_red = np.where(c_work == -1, c_red, c_work)
+
+            logger.debug("Updated reduced cost matrix:\n%s", c_red)
 
 
-    if crossed == len(c_red): #optimum solution is possible
-        # 5.2. Allocate on zeros in c_red array
-        zero_seqs = assign_opt(c_red)
-        # print(f"zero_seqs: {zero_seqs}")
-        possible_assignments = {}
-        for seq in zero_seqs:
-            # print(f"sequence: {seq}")
-            possible_assignments[best_zeros(seq, c_array)[0]] = \
-                                 best_zeros(seq, c_array)[1]
-
-        delivered_assignment = possible_assignments[min(possible_assignments)]
-
-        print(f"\nDelivered assignment solution: \n{delivered_assignment}")
-        print(f"\nTotal cost of assignment: {max(possible_assignments)}")
-
-        not_allocated = False
-    else:
-        # 5.3. Get the indexes of intersection of crossed out rows/cols
-        intersections = []
-        for indxr in crossed_rows:
-            for indxc in crossed_cols:
-                intersections.append((indxr, indxc))
-        # print(f"\nIntersections: {intersections}")
-        # 5.4. Optimize the solution
-        min_opt = np.min(c_work[c_work > -1])
-        # print(f"\nmin_opt: \n{min_opt}")
-        c_work = np.where(c_work > -1, c_work - min_opt, c_work)
-        for inters in intersections:
-            c_work[inters[0], inters[1]] = \
-                c_red[inters[0], inters[1]] + min_opt
-        c_work = np.where(c_work == -1, c_red, c_work)
-        c_red = c_work
-        # print(f"\nc_red: \n{c_red}")
+if __name__ == "__main__":
+    main()
