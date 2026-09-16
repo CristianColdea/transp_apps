@@ -5,6 +5,17 @@ import math
 """
 Simple Python script to exemplify code implementation of A* algorithm.
 """
+
+# -------------------------------------------------------------------
+# Exemplification of 'heapq' in action
+# -------------------------------------------------------------------
+
+# Define an unordered list
+l_unord = [23, 12, 27, 9, 32]
+# Turn the initial list into a heapifyed one
+heapq.heapify(l_unord)
+# prints [9, 12, 27, 23, 32]
+
 # -------------------------------------------------------------------
 # Graph definition
 # Each node has (x, y) coordinates (e.g. approximate GPS-like coords)
