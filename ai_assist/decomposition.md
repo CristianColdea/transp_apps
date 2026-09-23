@@ -37,13 +37,26 @@ class ComputationalData(NamedTuple):
     cost\_array: np.ndarray
     supply\_array: np.ndarray
     demand\_array: np.ndarray
-
-2. As assertion/shape check function which ensures the shape of supply and
+The structure RawInput is to be created after user input proper parsing, before
+assertions (see no 4.). After shape inputs shape and matrix integrity check and
+pass, ComputationalData is to be created to provide proper args to following
+functions.
+4. An assertion/shape check function which ensures the shape of supply and
    demand lists are matching rows and columns of unit cost matrix,
-respectively.
-3. The tie breaking functions, one for the maximum amount, and the other for
+respectively. The 'assertions' function must operate on RawInput structure
+5. The tie breaking functions, one for the maximum amount, and the other for
    allocation where the supply is greater or equal to demand; the third tie is
 managed within the orchestrator based on the returns from the tie breaking
-functions.
-4. The orchestrator function which calls the helpers, receives the returns, and
-   make the proper allocation.
+functions. There is also a possibility to consolidate all the tie-breakings
+into one function, too; yet to be seen as the script is built. This function(s)
+must return the precise preferrd allocation position when called from the
+allocation function (see no 6).
+6. The allocation function which makes use of the previously defined functions,
+   with proper data formats as args. Allocated cells must have the unit cost
+blocked in the form of 'BLOCK\_COST = max(cost\_matrix) + 1'. The allocation
+sum must be checked after each allocation against the supply/demand total (no
+matter which since the transportation problem is a balanced one, i.e., Sum of
+Supply = Sum of Demand. Also a safety mechanism for the unit cost matrix loop
+must exists, not decisively necessary, but exists as safety against infinite
+looping. This function returns the allocation matrix, i.e., the basic feasible
+solution.
