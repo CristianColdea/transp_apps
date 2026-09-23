@@ -44,10 +44,12 @@ functions.
 4. An assertions check function which ensures the shape of supply and
    demand lists are matching rows and columns of unit cost matrix, the cost
 matrix isn't a ragged one, and the transportation problem is a balanced one.
-The 'assertions' function must operate on RawInput structure.
+The 'assertions' function must operate on RawInput structure. try/except is to
+be employed.
 5. The tie breaking functions, one for the maximum amount, the other for
    allocation where the supply is greater or equal to demand, and the third
-logically normal allocation (see 'constituion.md' for more details). There is also a possibility to consolidate all the tie-breakings
+logically normal allocation (see 'constituion.md' for more details).
+There is also a possibility to consolidate all the tie-breakings
 into one function, too; yet to be seen as the script is built. This function(s)
 must return the precise preferrd allocation position when called from the
 allocation function (see no 6).
@@ -60,3 +62,19 @@ Supply = Sum of Demand. Also a safety mechanism for the unit cost matrix loop
 must exists, not decisively necessary, but exists as safety against infinite
 looping. This function returns the allocation matrix, i.e., the basic feasible
 solution.
+7. The feasibility\_cost function, first for feasibilty check of the basic
+   solution with the relation 'total allocated cells = m + n -1', where m is
+the number of cost unit matrix rows (supplies), and n is the number
+of columns of the same matrix (demands), and second for total basic feasible
+solution (BFS) transportation cost; using numpy.sum(BFS * cost\_array) is
+desired. Here too try/except is to be employed, returning a tuple of
+(is\_feasible, BFS\_cost).
+8. main() function to manage entry point, with try/excepts where are required.
+9. Final __name__ == "__main__" check.
+
+### Tasks allocation list
+To address the known limitations of the local models the following
+clarification follows:
+1. Locally coded - parse\_matrix, RawInput, ComputationData, feasibility\_cost.
+2. Frontier model coded - get\_user\_input, assertions, tie\_breaking,
+   allocation, main.
