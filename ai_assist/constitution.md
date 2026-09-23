@@ -13,17 +13,11 @@ assistance.
 * The script is meant to interact with the user solely in terminal.
 * Output must be reproducible.
 * The indicated libraries are the only ones to be used for coding, nothing more.
+
 From typing List, Tuple and NamedTuple is to be imported. Two data structures
 are to be created as NamedTuple, first as bundler for raw user input, second as
-a computational format, i.e., numpy arrays, bundle. The general form of bundles
-is:
-
-class RawInput(NamedTuple):
-    cost: List[List[int]]
-    supply: List[int]
-    demand: List[int]
-
-
+a computational format, i.e., numpy arrays, bundle. See the 'decomposition.md'
+document for more details.
 
 ### Principles
 * Prefer clarity and readability over cleverness.
@@ -33,8 +27,9 @@ class RawInput(NamedTuple):
 
 ### Roadmap
 Decomposition of the script according to four milestones:
-* Code the parser to process input from user.
+* Code a helper function for solid processing of unit cost matrix input from
+  user.
+* Code the parser to process all the input from the user.
 * Code helper functions for each tie-breaking rule.
 * Code the orchestrator function within which is the allocation algorithm.
-* Wrap the execution into 'main'.
-* Test the code.
+* Wrap the execution into 'main()'.
