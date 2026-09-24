@@ -23,13 +23,14 @@ document for more details.
 * Prefer clarity and readability over cleverness.
 * Every public function must have a doctring and type hints.
 * Tie-breaking must be deterministic and explicable.
-* The orchestrator function is the only entry point.
+* The allocation/orchestrator function is the only entry point for the algorithm.
 
 ### Roadmap
-Decomposition of the script according to four milestones:
+Decomposition of the script according to six milestones:
 * Code a helper function for solid processing of unit cost matrix input from
   user.
 * Code the parser to process all the input from the user.
 * Code helper functions for each tie-breaking rule.
-* Code the orchestrator function within which is the allocation algorithm.
+* Code the allocation/orchestrator function within which is the allocation algorithm.
+* Testing the script.
 * Wrap the execution into 'main()'.
