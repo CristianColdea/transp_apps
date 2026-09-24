@@ -46,35 +46,42 @@ functions.
 matrix isn't a ragged one, and the transportation problem is a balanced one.
 The 'assertions' function must operate on RawInput structure. try/except is to
 be employed.
-5. The tie breaking functions, one for the maximum amount, the other for
-   allocation where the supply is greater or equal to demand, and the third
-logically normal allocation (see 'constituion.md' for more details).
-There is also a possibility to consolidate all the tie-breakings
-into one function, too; yet to be seen as the script is built. This function(s)
-must return the precise preferrd allocation position when called from the
-allocation function (see no 6).
+5. The tie breaking function, for the first two rules as described in the 
+'Allocation Algorithm' section. The logically normal allocation is to be 
+managed within the allocation/orchestrator function (see 'constituion.md' 
+for more details). This function must return the precise preferred allocation
+position when called from the allocation function (see no 6).
 6. The allocation function which makes use of the previously defined functions,
    with proper data formats as args. Allocated cells must have the unit cost
-blocked in the form of 'BLOCK\_COST = max(cost\_matrix) + 1'. The allocation
-sum must be checked after each allocation against the supply/demand total (no
+blocked in the form of 'BLOCK\_COST = max(cost\_matrix) + 1'. The main unit 
+cost matrix loop (while) is governed by the supply (or demand) quantity (no
 matter which since the transportation problem is a balanced one, i.e., Sum of
-Supply = Sum of Demand. Also a safety mechanism for the unit cost matrix loop
-must exists, not decisively necessary, but exists as safety against infinite
+Supply = Sum of Demand). The working copies of supply and demand arrays must 
+be updated after each allocation by subtracting the last allocation to ensure
+the correct loop end. Also a safety mechanism for the unit cost matrix loop
+must exists, not decisively necessary, but as a safety against infinite
 looping. This function returns the allocation matrix, i.e., the basic feasible
 solution.
-7. The feasibility\_cost function, first for feasibilty check of the basic
+7. The feasibility\_cost function, first for feasibility check of the basic
    solution with the relation 'total allocated cells = m + n -1', where m is
 the number of cost unit matrix rows (supplies), and n is the number
 of columns of the same matrix (demands), and second for total basic feasible
 solution (BFS) transportation cost; using numpy.sum(BFS * cost\_array) is
-desired. Here too try/except is to be employed, returning a tuple of
-(is\_feasible, BFS\_cost).
+desired. Here too try/except is to be employed, raising 'ValueError' on 
+degeneracy or returning a tuple of (is\_feasible, BFS\_cost) otherwise.
 8. main() function to manage entry point, with try/excepts where are required.
 9. Final __name__ == "__main__" check.
 
 ### Tasks allocation list
 To address the known limitations of the local models the following
-clarification follows:
-1. Locally coded - parse\_matrix, RawInput, ComputationData, feasibility\_cost.
-2. Frontier model coded - get\_user\_input, assertions, tie\_breaking,
-   allocation, main.
+clarification follows in the form of 'function(reason)':
+1. Locally coded:
+    * parse\_matrix (well scoped), 
+    * RawInput (pure boilerplate),
+    * ComputationalData (pure boilerplate).
+2. Frontier model coded:
+    * get\_user\_input (complex error handling),
+    * assertions (subtle defensive reasoning),
+    * tie\_breaking (most algorithmically subtle),
+    * allocation (interdependent logic),
+    * main (orchestrates the whole script).
