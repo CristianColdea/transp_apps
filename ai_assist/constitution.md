@@ -26,11 +26,18 @@ document for more details.
 * The allocation/orchestrator function is the only entry point for the algorithm.
 
 ### Roadmap
-Decomposition of the script according to six milestones:
-* Code a helper function for solid processing of unit cost matrix input from
+Decomposition of the script according to nine milestones:
+1. Code a helper function for solid processing of unit cost matrix input from
   user.
-* Code the parser to process all the input from the user.
-* Code helper functions for each tie-breaking rule.
-* Code the allocation/orchestrator function within which is the allocation algorithm.
-* Testing the script.
-* Wrap the execution into 'main()'.
+2. Code the parser to process all the input from the user.
+3. Code two data structures of NamedTuple type to store input and computational
+data.
+4. Code a function to check the shape match between cost unit matrix, and supply
+and demand lists.
+5. Code helper function for the first two tie-breaking rules (see 'decomposition.md'
+for more details on those rules).
+6. Code the allocation/orchestrator function within which is the allocation algorithm.
+7. Code a function to check if the determined basic solution if feasible and, if it is,
+compute the transportation solution cost.
+8. Testing the script.
+9. Wrap the execution into 'main()'.

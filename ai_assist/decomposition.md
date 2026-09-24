@@ -21,10 +21,10 @@ bottom.
 namely rows as tuples/lists, with/without wrappers, spaces. The return should
 be in the form of List[List[int]].
 2. A function to parse the user input. ast library is to be used here too.
-   try/except must be employed, not exit. The role of the function is to report
-a problem, not to stop the execution. Should report 1) the fail to parse input,
-and 2) input invalid format. The use of 'isinstance' is desired within this
-function.
+   try/except (with raising) must be employed, not exit. The role of the function
+   is to report a problem, not to stop the execution. Should report 1) the fail to
+   parse input, and 2) input invalid format. The use of 'isinstance' is desired
+   within this function.
 3. Two data structure to store raw user input and computational formats in the
    form of:
 
@@ -48,7 +48,7 @@ The 'assertions' function must operate on RawInput structure. try/except is to
 be employed.
 5. The tie breaking function, for the first two rules as described in the 
 'Allocation Algorithm' section. The logically normal allocation is to be 
-managed within the allocation/orchestrator function (see 'constituion.md' 
+managed within the allocation/orchestrator function (see 'constitution.md' 
 for more details). This function must return the precise preferred allocation
 position when called from the allocation function (see no 6).
 6. The allocation function which makes use of the previously defined functions,
@@ -67,10 +67,15 @@ solution.
 the number of cost unit matrix rows (supplies), and n is the number
 of columns of the same matrix (demands), and second for total basic feasible
 solution (BFS) transportation cost; using numpy.sum(BFS * cost\_array) is
-desired. Here too try/except is to be employed, raising 'ValueError' on 
-degeneracy or returning a tuple of (is\_feasible, BFS\_cost) otherwise.
-8. main() function to manage entry point, with try/excepts where are required.
-9. Final __name__ == "__main__" check.
+desired. Raising 'ValueError' on degeneracy or returning a tuple of 
+(is\_feasible, BFS\_cost) otherwise. Degeneracy messages should be printed in
+terminal: a) the solution is not feasible, has 'no of allocations'; b) should
+be 'no of allocations' for feasibility; c) the subsequent optimization (e.g.,
+MODI method) cannot proceed. The cost of a basic degenerate solution makes
+no sense.
+8. Test the script.
+9. main() function to manage entry point, with try/excepts where are required.
+__name__ == "__main__" check.
 
 ### Tasks allocation list
 To address the known limitations of the local models the following
@@ -84,4 +89,6 @@ clarification follows in the form of 'function(reason)':
     * assertions (subtle defensive reasoning),
     * tie\_breaking (most algorithmically subtle),
     * allocation (interdependent logic),
+    * feasibility_cost (apparently simple, but interaction
+    between them isn't),
     * main (orchestrates the whole script).

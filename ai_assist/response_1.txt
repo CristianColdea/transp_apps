@@ -1,0 +1,11 @@
+1) parse_matrix is to process the unit cost matrix input as a list of lists. parser_user_input should process the following inputs: supply, demand and unit cost matrix; for the last one parse_matrix is to be called within parser_user_input.
+2) Clarified.
+3) Tie-breaking rule 3 is managed inside the allocation/orchestrator function as an explicit 'else' branch.
+4) feasibility_cost - clarified.
+5) only int for quantities (supply, demand) and unit cost, thus basic solution total cost int too.
+6) (allocation_matrix, cost_array), where 'allocation_matrix' is determined by script execution, and cost_array is from user input.
+7) logging.INFO for displaying the required info to the user: a) determined solution; b) if is feasible; c) total cost. 
+loggin.error to every try/except.
+8) That's correct.
+9) Fixed.
+10) Fixed.
