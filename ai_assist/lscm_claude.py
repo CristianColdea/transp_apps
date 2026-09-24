@@ -26,22 +26,34 @@ def parse_cost_matrix(input_str: str) -> list[list[int]]:
     """
     Parses a string representation of a cost matrix into a list of lists of integers.
     Supports various nesting styles (tuples, lists) and whitespace.
+    A bare row like (1, 2, 3) is normalised into a single-row matrix [[1, 2, 3]].
     """
     # ast.literal_eval handles nested structures like [[1, 2], [3, 4]] or [(1, 2), (3, 4)]
     data = ast.literal_eval(input_str.strip())
 
-    if not isinstance(data, list):
-        # Handle cases where the outer structure might be a tuple
-        if isinstance(data, tuple):
-            data = list(data)
-        else:
-            raise ValueError("Input must represent a list of rows.")
+    if not isinstance(data, (list, tuple)):
+        raise ValueError("Input must represent a list of rows.")
+
+    # Convert outer tuple to list
+    if isinstance(data, tuple):
+        data = list(data)
+
+    # Detect bare row: a flat sequence of ints with no nested lists/tuples
+    # e.g. (1, 2, 3) parsed as [1, 2, 3] — wrap into single-row matrix
+    if data and all(isinstance(item, int) for item in data):
+        return [data]
 
     processed_matrix = []
     for row in data:
         if isinstance(row, (list, tuple)):
-            # Convert inner elements to integers and the row to a list
-            processed_matrix.append([int(item) for item in row])
+            # Validate that all elements are integers — reject floats
+            for item in row:
+                if not isinstance(item, int):
+                    raise ValueError(
+                        f"Cost matrix elements must be integers, "
+                        f"got {type(item).__name__}: {item}"
+                    )
+            processed_matrix.append(list(row))
         else:
             raise ValueError("Each row in the matrix must be a list or tuple.")
 
@@ -149,43 +161,38 @@ def assertions(raw: RawInput) -> None:
 
     Operates on a RawInput instance.  Raises ValueError on any failure.
     """
-    try:
-        # Check ragged matrix
-        row_lengths = [len(row) for row in raw.cost]
-        if len(set(row_lengths)) != 1:
-            raise ValueError(
-                f"Cost matrix is ragged: row lengths are {row_lengths}."
-            )
+    # Check ragged matrix
+    row_lengths = [len(row) for row in raw.cost]
+    if len(set(row_lengths)) != 1:
+        raise ValueError(
+            f"Cost matrix is ragged: row lengths are {row_lengths}."
+        )
 
-        m = len(raw.cost)        # rows  (sources)
-        n = row_lengths[0]       # columns (destinations)
+    m = len(raw.cost)        # rows  (sources)
+    n = row_lengths[0]       # columns (destinations)
 
-        # Supply dimension
-        if len(raw.supply) != m:
-            raise ValueError(
-                f"Supply length ({len(raw.supply)}) does not match "
-                f"the number of cost matrix rows ({m})."
-            )
+    # Supply dimension
+    if len(raw.supply) != m:
+        raise ValueError(
+            f"Supply length ({len(raw.supply)}) does not match "
+            f"the number of cost matrix rows ({m})."
+        )
 
-        # Demand dimension
-        if len(raw.demand) != n:
-            raise ValueError(
-                f"Demand length ({len(raw.demand)}) does not match "
-                f"the number of cost matrix columns ({n})."
-            )
+    # Demand dimension
+    if len(raw.demand) != n:
+        raise ValueError(
+            f"Demand length ({len(raw.demand)}) does not match "
+            f"the number of cost matrix columns ({n})."
+        )
 
-        # Balanced check
-        total_supply = sum(raw.supply)
-        total_demand = sum(raw.demand)
-        if total_supply != total_demand:
-            raise ValueError(
-                f"Problem is not balanced: total supply ({total_supply}) "
-                f"!= total demand ({total_demand})."
-            )
-
-    except ValueError as exc:
-        logger.error("Assertion check failed: %s", exc)
-        raise
+    # Balanced check
+    total_supply = sum(raw.supply)
+    total_demand = sum(raw.demand)
+    if total_supply != total_demand:
+        raise ValueError(
+            f"Problem is not balanced: total supply ({total_supply}) "
+            f"!= total demand ({total_demand})."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -268,7 +275,8 @@ def allocation(data: ComputationalData) -> np.ndarray:
 
         min_cost = int(np.min(cost_work))
         if min_cost >= BLOCK_COST:
-            break                    # all cells blocked
+            logger.warning("All cells blocked — exiting allocation loop.")
+            break
 
         # All cells sharing the current minimum cost
         rows, cols = np.where(cost_work == min_cost)
@@ -318,39 +326,38 @@ def feasibility_cost(
     Feasibility criterion: allocated_cells == m + n - 1.
     Cost: numpy.sum(allocation_matrix * cost_array).
 
-    Prints degeneracy messages to terminal and raises ValueError when
+    Logs degeneracy messages via logger.info and raises ValueError when
     the solution is degenerate.
 
     Returns:
         (True, total_cost) when the solution is feasible.
     """
-    try:
-        m, n = allocation_matrix.shape
-        allocated_cells = int(np.count_nonzero(allocation_matrix))
-        required = m + n - 1
+    m, n = allocation_matrix.shape
+    allocated_cells = int(np.count_nonzero(allocation_matrix))
+    required = m + n - 1
 
-        if allocated_cells != required:
-            print(
-                f"The solution is not feasible, has {allocated_cells} "
-                f"allocation(s)."
-            )
-            print(f"Should be {required} allocation(s) for feasibility.")
-            print(
-                "The subsequent optimization (e.g., MODI method) "
-                "cannot proceed."
-            )
-            print("The cost of a basic degenerate solution makes no sense.")
-            raise ValueError(
-                f"Degenerate solution: {allocated_cells} allocation(s), "
-                f"need {required}."
-            )
+    if allocated_cells != required:
+        logger.info(
+            "The solution is not feasible, has %d allocation(s).",
+            allocated_cells,
+        )
+        logger.info(
+            "Should be %d allocation(s) for feasibility.", required
+        )
+        logger.info(
+            "The subsequent optimization (e.g., MODI method) "
+            "cannot proceed."
+        )
+        logger.info(
+            "The cost of a basic degenerate solution makes no sense."
+        )
+        raise ValueError(
+            f"Degenerate solution: {allocated_cells} allocation(s), "
+            f"need {required}."
+        )
 
-        total_cost = int(np.sum(allocation_matrix * cost_array))
-        return (True, total_cost)
-
-    except ValueError as exc:
-        logger.error("Feasibility check failed: %s", exc)
-        raise
+    total_cost = int(np.sum(allocation_matrix * cost_array))
+    return (True, total_cost)
 
 
 # ---------------------------------------------------------------------------
