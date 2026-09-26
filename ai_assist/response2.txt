@@ -1,0 +1,38 @@
+Clarifications and Confirmations
+
+1. `feasibility_cost` — Return Type and Exception Behaviour
+The function raises `ValueError` on degeneracy and returns `(True, total_cost)` on success. The `bool` in the return tuple is intentionally retained for readability in `main()`, where the unpacking `is_feasible, total_cost = feasibility_cost(...)` reads naturally. Option A is confirmed.
+
+2. Terminal Output — `logging` vs. `print()`
+All terminal output goes exclusively through the `logging` module. No `print()` statements anywhere in the script. Specifically: `logger.info` for all user-facing output including degeneracy notification messages, `logger.error` for all exception handling in `try/except` blocks.
+
+3. Tie-Breaking Return Convention
+Confirmed. `tie_breaking()` accepts `List[Tuple[int, int]]` of candidate cell coordinates and returns `Tuple[int, int] | None`. A unique winner from Rules 1 or 2 is returned directly. If both rules fail to resolve the tie, `None` is returned and `allocation()` applies Rule 3 as an explicit `else` branch: `sorted(candidates)[0]` — left-to-right, top-to-bottom index order.
+
+4. Matrix Blocking Scope
+Confirmed and clarified. When `remaining_supply[i] == 0` after an allocation, the entire row `i` is set to `BLOCK_COST`. When `remaining_demand[j] == 0`, the entire column `j` is set to `BLOCK_COST`. Blocking only the single allocated cell `(i, j)` is insufficient and incorrect.
+
+5. Counting Allocated Cells for Feasibility**
+Confirmed. `np.count_nonzero(allocation_matrix)` is the exact check. Feasibility criterion: `np.count_nonzero(allocation_matrix) == m + n - 1`.
+
+6. User Input Interface
+Confirmed. `get_user_input()` issues three sequential terminal prompts:
+	6.1. Unit cost matrix — parsed by `parse_cost_matrix()` via `ast.literal_eval()`
+	6.2. Supply vector — parsed directly by `ast.literal_eval()`
+	6.3. Demand vector — parsed directly by `ast.literal_eval()`
+
+`try/except` with raising is employed for all three inputs, reporting parse failures and invalid format separately. `isinstance` is used for format validation of supply and demand.
+
+7. Negative and Non-Integer Validation in `assertions()`
+Accepted with one nuance: validate that all supply, demand, and cost matrix values are non-negative integers (`>= 0`), not strictly positive. Zero cost is valid in some transportation models; zero supply or demand is technically valid for degenerate problems. Non-integer values are already rejected upstream in `get_user_input()` via `isinstance` checks, but the redundant check in `assertions()` is acceptable as a defensive layer.
+
+8. Try/Except Scoping in `assertions()`
+`assertions()` raises `ValueError` directly without catching its own exceptions. The self-catching anti-pattern — catching a `ValueError` internally and re-raising after logging — produces duplicate log entries and is explicitly to be avoided. `main()` handles all exceptions propagated from `assertions()` via its own `try/except`.
+
+---
+
+## Proceed
+
+All clarifications above are confirmed. Please proceed to generate each milestone component in the order specified in the decomposition roadmap, beginning with `parse_cost_matrix` as Component 1.
+
+---
