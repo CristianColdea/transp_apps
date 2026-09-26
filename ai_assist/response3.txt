@@ -1,0 +1,83 @@
+---
+
+Clarifications and Confirmations
+
+1. Tie-breaking Rule 2 — Remaining vs Original Supply/Demand
+Rule 2 operates on **remaining** supply and demand after all previous allocations — not the original totals. The algorithm is iterative; at each step the remaining quantities reflect what has already been allocated.
+
+2. Tie-breaking Return Value
+`tie_breaking()` returns `Tuple[int, int] | None` — a `(row, col)` tuple identifying the selected cell, or `None` if Rules 1 and 2 fail to resolve the tie. The caller (`allocation()`) handles `None` by applying Rule 3 as an explicit `else` branch.
+
+3. `BLOCK_COST` Definition
+Confirmed: `BLOCK_COST = int(np.max(cost_array)) + 1`, operating on the working copy of the cost array (`cost_work`), not the original 2D Python list. When a row's remaining supply reaches zero, the entire row is set to `BLOCK_COST`. When a column's remaining demand reaches zero, the entire column is set to `BLOCK_COST`.
+
+4. Allocation Matrix Type
+The allocation function returns a `np.ndarray` of the same shape as the cost matrix, with integer dtype. It is not a `List[List[int]]` or a custom `NamedTuple`.
+
+5. Error Handling Format
+Standardize on `ValueError` throughout — no custom exception classes. All exceptions are logged via `logger.error` in `try/except` blocks. `main()` catches exceptions from each pipeline stage and returns early on failure. No `sys.exit()` is used anywhere.
+
+6. Function Name — `assertions`
+The public function name is `assertions`. The phrase "assertions check function" in the decomposition is descriptive text only, not a name. There is no `assertions_check` function.
+
+7. Entry Point Clarification
+`main()` is the CLI driver and the script's execution entry point, guarded by `if __name__ == "__main__"`. `allocation()` is the algorithm entry point — the only function through which the allocation logic is accessed. `main()` calls `allocation()` after input parsing and validation. Direct import of `allocation()` for library use is acceptable.
+
+8. Allowed Imports
+User interaction uses `input()` exclusively — no `sys.stdin`, no `argparse`, no CLI flags. `sys` and `argparse` are not required and must not be imported. The allowed libraries remain: `numpy`, `typing`, `ast`, `logging`, plus `from __future__ import annotations`. Python built-ins (`input`, `len`, `sum`, `min`, `max`, `int`, `set`) are implicitly available and require no import.
+
+9. `from __future__ import annotations`
+Confirmed: `from __future__ import annotations` is the correct directive, placed at the top of the file before all other imports. It enables forward references in type annotations — specifically allowing `get_user_input()` to annotate its return type as `RawInput` before the class is defined.
+
+10. Shape-Matching Logic in `assertions()`
+Both checks are required and must be enforced independently:
+- Dimensional matching: `len(supply) == rows` AND `len(demand) == cols`
+- Balance: `sum(supply) == sum(demand)`
+- Non-ragged: all rows of the cost matrix have equal length
+- Non-negative: all supply, demand, and cost matrix values must be `>= 0`
+
+11. Data Type of Cost Entries
+The parser (`parse_matrix`) enforces that all cost matrix elements are integers and rejects floats and booleans. `assertions()` additionally validates that all cost, supply, and demand values are non-negative (`>= 0`). Zero is valid; negative values raise `ValueError`.
+
+12. Testing Framework
+Use `pytest`. Test file named `test_lscm_openai.py`. Include tests for standard operation, edge cases (single row matrix, tie-breaking scenarios), and expected exceptions using `pytest.raises`. Import public functions directly from the script.
+
+13. Logging Policy
+```python
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
+```
+- `logger.info` — all user-facing output: determined allocation matrix, feasibility status, total cost, and degeneracy notification messages
+- `logger.error` — all exception handling in `try/except` blocks
+- `logger.warning` — safety mechanism triggers (e.g., all cells blocked, max iterations reached)
+- `print()` — not used anywhere in the script. All terminal output goes exclusively through `logger`.
+
+14. Tie-breaking Rule Precedence — Explicit Order
+The three rules are applied in strict sequential precedence:
+- **Rule 1:** Among all cells sharing the minimum cost, select the cell with the maximum allocatable quantity (`min(remaining_supply[i], remaining_demand[j])`). If this produces a unique winner, allocate there.
+- **Rule 2:** If Rule 1 produces multiple winners with equal maximum quantity, prefer the cell where `remaining_supply[i] >= remaining_demand[j]`. If this produces a unique winner, allocate there. If multiple cells qualify, take the first in row-major order (`sorted(preferred)[0]`).
+- **Rule 3:** If Rules 1 and 2 both fail to resolve the tie, apply index order: `sorted(candidates)[0]` — left-to-right, top-to-bottom. This is handled as an explicit `else` branch inside `allocation()`, not inside `tie_breaking()`.
+
+15. Data Structures — Storage Format
+- `RawInput` stores Python native types: `cost: List[List[int]]`, `supply: List[int]`, `demand: List[int]`
+- `ComputationalData` stores NumPy arrays: `cost_array: np.ndarray`, `supply_array: np.ndarray`, `demand_array: np.ndarray`
+- Conversion from `RawInput` to `ComputationalData` happens in `main()` after `assertions()` passes, using `np.array(..., dtype=int)`
+
+16. `tie_breaking()` Function Signature
+The correct signature is:
+```python
+def tie_breaking(
+    candidates: List[Tuple[int, int]],
+    supply: np.ndarray,
+    demand: np.ndarray,
+) -> Tuple[int, int] | None:
+```
+The function receives only the candidate cell coordinates and the current remaining supply/demand arrays — not the full cost matrix. The cost matrix is not needed because candidate filtering has already been performed upstream in `allocation()`.
+
+---
+
+Proceed
+
+All clarifications above are confirmed. Please proceed to generate each component in the order specified in the decomposition roadmap, beginning with `parse_matrix` as Component 1. Generate the complete script in one pass, covering all nine components.
+
+---
