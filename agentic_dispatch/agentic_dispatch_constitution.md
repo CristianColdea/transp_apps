@@ -74,5 +74,3 @@ Nine milestones in dependency order:
 - No machine learning components in this version; the decision step uses a classical assignment solver.
 
 ---
-
-*Next step: decomposition document.*
