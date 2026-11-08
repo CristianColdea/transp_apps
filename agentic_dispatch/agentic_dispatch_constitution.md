@@ -16,7 +16,7 @@ To implement a simplified but structurally honest fleet dispatch demonstrator fo
 
 ## Tech Stack and Constraints
 
-- **Libraries:** `osmnx`, `networkx`, `scipy`, `numpy`, `pandas`, `folium`, `logging`, `dataclasses`, `heapq`, `random`, `typing`.
+- **Libraries:** `osmnx`, `networkx`, `scipy`, `numpy`, `pandas`, `folium`, `logging`, `dataclasses`, `heapq`, `random`, `typing`, `pathlib', 'time'.
 - **Imports:** `from __future__ import annotations`.
 - All interaction is programmatic (no terminal input); outputs are logged and written to file or rendered as a Folium map.
 - Output must be reproducible: a fixed random seed governs all stochastic elements.
