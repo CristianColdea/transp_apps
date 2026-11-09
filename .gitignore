@@ -1,9 +1,6 @@
-*.py~
-*.py.un~
-*.md~
-*.md.un~
 *.[oa]
 *.swp
-*.__pycache__
+*.swo
+__pycache__/
 *~
 .ipynb_checkpoints/
