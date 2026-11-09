@@ -16,7 +16,7 @@ To implement a simplified but structurally honest fleet dispatch demonstrator fo
 
 ## Tech Stack and Constraints
 
-- **Libraries:** `osmnx`, `networkx`, `scipy`, `numpy`, `pandas`, `folium`, `logging`, `dataclasses`, `heapq`, `random`, `typing`, `pathlib', 'time'.
+- **Libraries:** `osmnx`, `networkx`, `scipy`, `numpy`, `pandas`, `folium`, `logging`, `dataclasses`, `heapq`, `random`, `typing`, `pathlib`, `time`.
 - **Imports:** `from __future__ import annotations`.
 - All interaction is programmatic (no terminal input); outputs are logged and written to file or rendered as a Folium map.
 - Output must be reproducible: a fixed random seed governs all stochastic elements.
@@ -42,7 +42,7 @@ Nine milestones in dependency order:
 1. **Data structures:** `Vehicle`, `Order`, `Jam`, `Assignment` as `dataclass` or `NamedTuple`.
 2. **Road network:** download the study area from OpenStreetMap via OSMnx, add edge speeds and travel times, save to GraphML for reuse.
 3. **Travel-time matrix:** precompute shortest-path travel times (Dijkstra, weight = `travel_time`) between the base, all loading nodes and all delivery nodes.
-4. **Order generator:** produce a random but reproducible list of orders (loading node, delivery node, tonnage, arrival time).
+4. **Scenario generator:** produce a random but reproducible scenario: candidate nodes, orders (loading node, delivery node, tonnage, arrival time), the fleet, and traffic jams.
 5. **Feasibility filter:** given the current vehicle states and an order, return the list of feasible vehicle–order pairs (capacity and driving-time constraints).
 6. **Cost matrix and assignment:** build the time-to-loading cost matrix for feasible pairs and solve with `scipy.optimize.linear_sum_assignment`.
 7. **State update:** apply an assignment to the shared state (vehicle position, free time, driving hours, order queue).
@@ -74,3 +74,5 @@ Nine milestones in dependency order:
 - No machine learning components in this version; the decision step uses a classical assignment solver.
 
 ---
+
+*Next step: decomposition document.*
