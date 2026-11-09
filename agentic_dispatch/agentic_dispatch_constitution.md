@@ -39,9 +39,9 @@ To implement a simplified but structurally honest fleet dispatch demonstrator fo
 
 Nine milestones in dependency order:
 
-1. **Data structures:** `Vehicle`, `Order`, `Jam`, `Assignment` as `dataclass` or `NamedTuple`.
+1. **Data structures and shared state:** `Vehicle` and `FleetState` as `dataclass`; `Order`, `Jam` and `Assignment` as `NamedTuple`.
 2. **Road network:** download the study area from OpenStreetMap via OSMnx, add edge speeds and travel times, save to GraphML for reuse.
-3. **Travel-time matrix:** precompute shortest-path travel times (Dijkstra, weight = `travel_time`) between the base, all loading nodes and all delivery nodes.
+3. **Travel-time matrix:** precompute shortest-path travel times (Dijkstra, weight = `travel_time`) between the base and all candidate nodes, and rebuild it from the set of active jams whenever a jam starts or ends.
 4. **Scenario generator:** produce a random but reproducible scenario: candidate nodes, orders (loading node, delivery node, tonnage, arrival time), the fleet, and traffic jams.
 5. **Feasibility filter:** given the current vehicle states and an order, return the list of feasible vehicle–order pairs (capacity and driving-time constraints).
 6. **Cost matrix and assignment:** build the time-to-loading cost matrix for feasible pairs and solve with `scipy.optimize.linear_sum_assignment`.
@@ -69,6 +69,9 @@ Nine milestones in dependency order:
 
 - Orders are capped at the largest vehicle capacity (no splitting in this version).
 - Driver rules are limited to the 4.5-hour driving limit and 45-minute break (not full daily/weekly limits).
+- Idle waiting does not count as rest; only a scheduled break resets the driving time.
+- One speed cap of 90 km/h applies to the whole fleet; vans are assumed to drive like trucks.
+- Only idle vehicles are considered at each dispatch tick.
 - One regional coordinator handles the whole study area in this version.
 - The strategic tier is reduced to logging situations it would escalate to the human dispatcher.
 - No machine learning components in this version; the decision step uses a classical assignment solver.

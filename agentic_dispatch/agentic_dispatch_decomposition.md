@@ -8,7 +8,7 @@
 
 This document translates the nine roadmap milestones of the Constitution into concrete script components: their inputs, outputs, responsibilities, interface contracts, and task allocation between local and frontier models. Read alongside the Constitution and `data_action_draft.ipynb`.
 
-**Revision 2 (9 November 2026).** This version incorporates the resolutions of an independent specification review by Gemini 4 Argon (seven ambiguities, four items of missing information, six internal contradictions). The review itself is kept in the project repository. Every resolution was decided by the human author.
+**Revision history.** *Revision 2 (9 November 2026)* incorporates the resolutions of an independent specification review by Gemini 4 Argon (seven ambiguities, four items of missing information, six internal contradictions). *Revision 3 (9 November 2026)* resolves three minor issues found in a second review: the stopping rule of the event loop, the functions that log arrivals and jams, and the depot coordinates. Both reviews are kept in the project repository. Every resolution was decided by the human author.
 
 ---
 
@@ -274,6 +274,20 @@ Resets `drive_time` to 0 and sets `status='idle'`.
 
 For each pending order not yet in `state.escalated`: if `now - arrival > ESCALATION_WAIT` (7200 s), write an `escalation` record and add the id to `state.escalated`. Each order is escalated at most once. This is the strategic tier reduced to logging, as stated in the Constitution.
 
+**`on_order_arrival(state: FleetState, order: Order, now: float) -> None`**
+
+Adds the order to `state.orders` and its id to `state.pending`; logs `order_arrived`.
+
+**`on_jam_start(state: FleetState, jam: Jam, now: float) -> None`**
+
+Adds the jam to `state.active_jams`; logs `jam_started`. The travel-time matrix is not part of `FleetState`; the event loop rebuilds it (Component 8).
+
+**`on_jam_end(state: FleetState, jam_id: int, now: float) -> None`**
+
+Removes the jam from `state.active_jams`; logs `jam_ended`.
+
+With these three helpers, every one of the eight log record types has exactly one function that writes it, and no code outside this component changes `FleetState`, except that the event loop sets `end_time` and appends to `cycle_times`.
+
 **Log schema.** Every record is `(time, record_type, details)`:
 
 | Record type | Keys in `details` |
@@ -299,11 +313,11 @@ A discrete-event simulation. Events wait in a priority queue (`heapq`); the cloc
 
 | Event | Priority | Payload | Action |
 | --- | --- | --- | --- |
-| `JAM_START` | 0 | `jam_id` | Add to `state.active_jams`; rebuild `tt` from `G` and the active set (Component 3) |
-| `JAM_END` | 0 | `jam_id` | Remove from `state.active_jams`; rebuild `tt`, or reuse `tt0` when no jam is active |
-| `VEHICLE_FREE` | 1 | `(vehicle_id, order_id)` | `on_vehicle_free`; if it returns a time, schedule `BREAK_END` |
+| `JAM_START` | 0 | `jam_id` | `on_jam_start`; rebuild `tt` from `G` and the active set (Component 3) |
+| `JAM_END` | 0 | `jam_id` | `on_jam_end`; rebuild `tt`, or reuse `tt0` when no jam is active |
+| `VEHICLE_FREE` | 1 | `(vehicle_id, order_id)` | `on_vehicle_free`; if it returns a time, schedule `BREAK_END`; then check the stopping rule |
 | `BREAK_END` | 1 | `vehicle_id` | `on_break_end` |
-| `ORDER_ARRIVAL` | 2 | `order_id` | Add the order to `state.orders` and its id to `state.pending` |
+| `ORDER_ARRIVAL` | 2 | `order_id` | `on_order_arrival` |
 | `DISPATCH_TICK` | 3 | none | See below |
 
 At the same timestamp, the priorities put state changes before the dispatch tick, so the policy always sees an up-to-date state.
@@ -318,12 +332,13 @@ At the same timestamp, the priorities put state changes before the dispatch tick
 
 **Initialisation.** Push one `ORDER_ARRIVAL` per order, one `JAM_START` and one `JAM_END` per jam, and the first `DISPATCH_TICK` at time 0.
 
-**Termination.** Orders arrive during the shift `[0, horizon)`. The simulation then continues until every order is delivered, so the queue empties naturally once the last delivery is done and ticks stop rescheduling. Two safety stops apply:
+**Termination.** Orders arrive during the shift `[0, horizon)`; the simulation then continues until every order is delivered.
 
-- if the clock passes `horizon + DRAIN_LIMIT` (the drain cap), stop and log a warning;
-- if more than `MAX_EVENTS` events have been processed, stop and log an error.
+- **Normal stop:** immediately after the `VEHICLE_FREE` event that completes the last order (`len(state.completed) == len(orders)`). Leftover `JAM_END`, `BREAK_END` or `DISPATCH_TICK` events still in the queue are discarded, so they cannot inflate `end_time` or add empty cycles to `cycle_times`.
+- **Drain cap:** if the clock passes `horizon + DRAIN_LIMIT`, stop and log a warning.
+- **Safety stop:** if more than `MAX_EVENTS` events have been processed, stop and log an error.
 
-At the stop, set `state.end_time` to the current clock. Orders not in `completed` at that moment are **unserved** (normally zero; non-zero only if the drain cap was reached).
+At any stop, set `state.end_time` to the current clock. Orders not in `completed` at that moment are **unserved** (zero after a normal stop; non-zero only after the drain cap or the safety stop).
 
 **Fair comparison.** `main()` builds two fresh states with `make_fleet` and the same seed, one for each policy. The `orders` and `jams` lists are immutable and shared. Only `policy` differs. No `copy` module is needed.
 
@@ -366,7 +381,7 @@ Everything the metrics need is stored in `FleetState`, so `compute_metrics` take
 **Scenario parameters (first test).**
 
 - `PLACE = 'Antwerp, Belgium'`; `GRAPHML_PATH = 'data/antwerp_drive.graphml'`.
-- `DEPOT = (lat, lon)` in the Antwerp port area, set by the author; `ox.distance.nearest_nodes` snaps it to the network.
+- `DEPOT = (51.2600, 4.3580)` as `(lat, lon)`, a starting value in the Antwerp port area proposed by the reviewer; confirm it on a map before the first run. `ox.distance.nearest_nodes(G, X=DEPOT[1], Y=DEPOT[0])` snaps it to the network. Note the argument order: `X` is longitude, `Y` is latitude, the reverse of the `(lat, lon)` convention used for `DEPOT` and `Jam.centroid`.
 - `N_CANDIDATES = 200`, `N_ORDERS = 300`, `MIN_TONNAGE = 0.2`, `N_JAMS = 3`.
 - `N_VEHICLES = 50` for the first test, scaled to 200–300 once the script runs.
 - `CAPACITIES = [1.2, 3.5, 7.0, 24.0]` tonnes of payload (approximate figures, to be checked against a reliable source).
