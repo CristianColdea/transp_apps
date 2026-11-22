@@ -6,7 +6,7 @@
 
 ## Script Architecture and Decomposition Plan
 
-This document translates the nine roadmap milestones of the Constitution into concrete script components: their inputs, outputs, responsibilities, interface contracts, and task allocation between local and frontier models. Read alongside the Constitution and `data_action_draft.ipynb`.
+This document translates the nine roadmap milestones of the Constitution into concrete script components: their inputs, outputs, responsibilities, interface contracts, and task allocation between local and frontier models. Read alongside the Constitution and `design_notes_initial.md`.
 
 **Revision history.** *Revision 2 (9 November 2026)* incorporates the resolutions of an independent specification review by Gemini 4 Argon (seven ambiguities, four items of missing information, six internal contradictions). *Revision 3 (9 November 2026)* resolves three minor issues found in a second review: the stopping rule of the event loop, the functions that log arrivals and jams, and the depot coordinates. Both reviews are kept in the project repository. Every resolution was decided by the human author.
 
@@ -57,7 +57,7 @@ class FleetState:
     escalated: set[int] = field(default_factory=set)              # order ids already escalated
     active_jams: dict[int, Jam] = field(default_factory=dict)
     cycle_times: list[float] = field(default_factory=list)        # ms per policy call
-    log: list[tuple[float, str, dict]] = field(default_factory=list)
+    log: list[tuple[float, str, dict[str, Any]]] = field(default_factory=list)
     end_time: float = 0.0                                         # set when the simulation stops
 ```
 
