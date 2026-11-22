@@ -15,6 +15,7 @@ class Vehicle:
     drive_time: float  # driving time since the last break (seconds)
     busy_time: float  # cumulative time on assignments, incl. service (seconds)
 
+
 class Order(NamedTuple):
     """Represents a transport order in the system.
 
@@ -31,6 +32,7 @@ class Order(NamedTuple):
     load_node: int
     dest_node: int
     tonnage: float
+
 
 class Jam(NamedTuple):
     """Represents a traffic jam with spatial and temporal attributes.
@@ -52,32 +54,45 @@ class Jam(NamedTuple):
     end: float
 
 
+class Assignment(NamedTuple):
+    """A data structure representing a vehicle assignment for an order.
+
+    Attributes:
+        vehicle_id (int): The unique identifier of the assigned vehicle.
+        order_id (int): The unique identifier of the associated order.
+        issued_at (float): The timestamp when the assignment was issued.
+    """
+
+    vehicle_id: int
+    order_id: int
+    issued_at: float
+
 
 @dataclass
 class FleetState:
     """The shared state of the simulation and single source of truth.
 
     Attributes:
-        vehicles (dict[int, "Vehicle"]): Mapping of vehicle IDs to Vehicle objects.
-        orders (dict[int, "Order"]): Mapping of order IDs to Order objects.
+        vehicles (dict[int, Vehicle]): Mapping of vehicle IDs to Vehicle objects.
+        orders (dict[int, Order]): Mapping of order IDs to Order objects.
         pending (set[int]): Set of order IDs currently in a pending state.
         in_progress (set[int]): Set of order IDs currently being processed.
         completed (dict[int, float]): Mapping of order IDs to their completion timestamps.
         escalated (set[int]): Set of order IDs that have been escalated.
-        active_jams (dict[int, "Jam"]): Mapping of jam identifiers to Jam objects.
+        active_jams (dict[int, Jam]): Mapping of jam identifiers to Jam objects.
         cycle_times (list[float]): List of recorded cycle times for analysis.
         log (list[tuple[float, str, dict]]): A chronological log of events containing
         timestamps, types, and metadata.
         end_time (float): The final timestamp of the simulation run.
     """
 
-    vehicles: dict[int, "Vehicle"]
-    orders: dict[int, "Order"] = field(default_factory=dict)
+    vehicles: dict[int, Vehicle]
+    orders: dict[int, Order] = field(default_factory=dict)
     pending: set[int] = field(default_factory=set)
     in_progress: set[int] = field(default_factory=set)
     completed: dict[int, float] = field(default_factory=dict)
     escalated: set[int] = field(default_factory=set)
-    active_jams: dict[int, "Jam"] = field(default_factory=dict)
+    active_jams: dict[int, Jam] = field(default_factory=dict)
     cycle_times: list[float] = field(default_factory=list)
     log: list[tuple[float, str, dict]] = field(default_factory=list)
     end_time: float = 0.0
