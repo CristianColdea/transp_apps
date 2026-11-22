@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 from typing import Any, NamedTuple
+import networkx as nx
 
 
 SEED: int = 42
@@ -134,3 +135,15 @@ class FleetState:
     cycle_times: list[float] = field(default_factory=list)
     log: list[tuple[float, str, dict[str, Any]]] = field(default_factory=list)
     end_time: float = 0.0
+
+
+def sample_candidates(
+    G: nx.MultiDiGraph,
+    n_candidates: int,
+    base_node: int,
+    seed: int) -> list[int]:
+
+    """Sample distinct candidate nodes from G, excluding the base."""
+    rng = random.Random(seed)
+    nodes = [node for node in G.nodes() if node != base_node]
+    return rng.sample(nodes, min(n_candidates, len(nodes)))
