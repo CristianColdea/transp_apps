@@ -138,12 +138,19 @@ class FleetState:
 
 
 def sample_candidates(
-    G: nx.MultiDiGraph,
-    n_candidates: int,
-    base_node: int,
-    seed: int) -> list[int]:
+    G: nx.MultiDiGraph, n_candidates: int, base_node: int, seed: int
+) -> list[int]:
+    """Sample distinct candidate nodes from G, excluding the base node.
 
-    """Sample distinct candidate nodes from G, excluding the base."""
+    Args:
+        G: The multi-directed graph containing potential candidates.
+        n_candidates: The maximum number of candidates to sample.
+        base_node: The identifier of the node to exclude from sampling.
+        seed: The seed for the random number generator.
+
+    Returns:
+        A list of sampled unique node identifiers.
+    """
     rng = random.Random(seed)
     nodes = [node for node in G.nodes() if node != base_node]
     return rng.sample(nodes, min(n_candidates, len(nodes)))
