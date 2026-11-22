@@ -32,4 +32,52 @@ class Order(NamedTuple):
     dest_node: int
     tonnage: float
 
+class Jam(NamedTuple):
+    """Represents a traffic jam with spatial and temporal attributes.
 
+    Attributes:tuple[float, float]   # (lat, lon)
+        id (int): Unique identifier for the jam.
+        centroid (tuple[float, float]): The geographic center of the jam as (lat, lon).
+        radius_m (float): The radius of the affected area in meters.
+        speed_factor (float): A multiplier where 0 < factor <= 1; travel time is divided by it.
+        start (float): The timestamp when the jam begins.
+        end (float): The timestamp when the jam ends.
+    """
+
+    id: int
+    centroid: tuple[float, float]  # (lat, lon)
+    radius_m: float
+    speed_factor: float  # 0 < factor <= 1; travel time is divided by it
+    start: float
+    end: float
+
+
+
+@dataclass
+class FleetState:
+    """The shared state of the simulation and single source of truth.
+
+    Attributes:
+        vehicles (dict[int, "Vehicle"]): Mapping of vehicle IDs to Vehicle objects.
+        orders (dict[int, "Order"]): Mapping of order IDs to Order objects.
+        pending (set[int]): Set of order IDs currently in a pending state.
+        in_progress (set[int]): Set of order IDs currently being processed.
+        completed (dict[int, float]): Mapping of order IDs to their completion timestamps.
+        escalated (set[int]): Set of order IDs that have been escalated.
+        active_jams (dict[int, "Jam"]): Mapping of jam identifiers to Jam objects.
+        cycle_times (list[float]): List of recorded cycle times for analysis.
+        log (list[tuple[float, str, dict]]): A chronological log of events containing
+        timestamps, types, and metadata.
+        end_time (float): The final timestamp of the simulation run.
+    """
+
+    vehicles: dict[int, "Vehicle"]
+    orders: dict[int, "Order"] = field(default_factory=dict)
+    pending: set[int] = field(default_factory=set)
+    in_progress: set[int] = field(default_factory=set)
+    completed: dict[int, float] = field(default_factory=dict)
+    escalated: set[int] = field(default_factory=set)
+    active_jams: dict[int, "Jam"] = field(default_factory=dict)
+    cycle_times: list[float] = field(default_factory=list)
+    log: list[tuple[float, str, dict]] = field(default_factory=list)
+    end_time: float = 0.0
