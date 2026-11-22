@@ -1,11 +1,26 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import NamedTuple
+from typing import Any, NamedTuple
+
 
 @dataclass
 class Vehicle:
-    """Data class representing a vehicle in the simulation."""
+    """Data class representing a vehicle in the simulation.
+
+    Attributes:
+        id (int): Unique identifier for the vehicle.
+        capacity (float): Payload capacity of the vehicle in tonnes.
+        node (int): The current OSM node ID where the vehicle is located.
+        status (str): Current operational status ('idle', 'en_route', 
+            or 'on_break').
+        free_at (float): Simulation time at which the vehicle becomes 
+            available for a new task.
+        drive_time (float): Cumulative driving time since the last break 
+            in seconds.
+        busy_time (float): Total cumulative time spent on assignments, 
+            including service time, in seconds.
+    """
 
     id: int
     capacity: float  # payload, tonnes
@@ -37,7 +52,7 @@ class Order(NamedTuple):
 class Jam(NamedTuple):
     """Represents a traffic jam with spatial and temporal attributes.
 
-    Attributes:tuple[float, float]   # (lat, lon)
+    Attributes:
         id (int): Unique identifier for the jam.
         centroid (tuple[float, float]): The geographic center of the jam as (lat, lon).
         radius_m (float): The radius of the affected area in meters.
@@ -81,8 +96,8 @@ class FleetState:
         escalated (set[int]): Set of order IDs that have been escalated.
         active_jams (dict[int, Jam]): Mapping of jam identifiers to Jam objects.
         cycle_times (list[float]): List of recorded cycle times for analysis.
-        log (list[tuple[float, str, dict]]): A chronological log of events containing
-        timestamps, types, and metadata.
+        log (list[tuple[float, str, dict[str, Any]]]): A chronological log of events containing
+            timestamps, types, and metadata.
         end_time (float): The final timestamp of the simulation run.
     """
 
@@ -94,5 +109,5 @@ class FleetState:
     escalated: set[int] = field(default_factory=set)
     active_jams: dict[int, Jam] = field(default_factory=dict)
     cycle_times: list[float] = field(default_factory=list)
-    log: list[tuple[float, str, dict]] = field(default_factory=list)
+    log: list[tuple[float, str, dict[str, Any]]] = field(default_factory=list)
     end_time: float = 0.0
