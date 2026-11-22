@@ -22,6 +22,8 @@ class Vehicle:
     id: int
     capacity: float          # payload, tonnes
     node: int                # current OSM node id
+    
+
     status: str              # 'idle' | 'en_route' | 'on_break'
     free_at: float           # simulation time at which the vehicle becomes available
     drive_time: float        # driving time since the last break (seconds)
